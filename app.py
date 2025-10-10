@@ -4,7 +4,7 @@ import pyodbc
 from azure.identity import DefaultAzureCredential #pip install azure-identity
 from azure.identity import AzureCliCredential
 
-credential = AzureCliCredential()
+#credential = AzureCliCredential()
 
 app = FastAPI()
 
@@ -23,7 +23,7 @@ def get_db_connection():
     database = "devazsqldbejcampaignmanager"
 
     # Get Azure AD token
-    #credential = DefaultAzureCredential()
+    credential = DefaultAzureCredential()
     token = credential.get_token("https://database.windows.net/.default")
     token_bytes = bytes(token.token, "utf-8")
 
