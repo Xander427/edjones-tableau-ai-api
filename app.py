@@ -1,7 +1,10 @@
 from pydantic import BaseModel
 from fastapi import FastAPI
 import pyodbc
-from azure.identity import DefaultAzureCredential #pip
+from azure.identity import DefaultAzureCredential #pip install azure-identity
+from azure.identity import AzureCliCredential
+
+credential = AzureCliCredential()
 
 app = FastAPI()
 
@@ -20,14 +23,15 @@ def get_db_connection():
     database = "devazsqldbejcampaignmanager"
 
     # Get Azure AD token
-    credential = DefaultAzureCredential()
+    #credential = DefaultAzureCredential()
     token = credential.get_token("https://database.windows.net/.default")
     token_bytes = bytes(token.token, "utf-8")
 
     conn_str = (
-        f"Driver={{ODBC Driver 17 for SQL Server}};"
+        f"Driver={{ODBC Driver 18 for SQL Server}};"
         f"Server={server};Database={database};"
         f"Authentication=ActiveDirectoryAccessToken;"
+        f"Encrypt=yes;TrustServerCertificate=no;"
     )
 
     conn = pyodbc.connect(conn_str, attrs_before={1256: token_bytes})
