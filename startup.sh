@@ -1,18 +1,24 @@
 #!/bin/bash
-
-# Exit on error
 set -e
 
-echo "=== Installing msodbcsql18 and unixodbc-dev ==="
-apt-get update
-apt-get install -y curl gnupg2 apt-transport-https
+echo "=== Installing system dependencies ==="
+apt-get update -y && apt-get install -y \
+    apt-transport-https \
+    curl \
+    gnupg \
+    unixodbc \
+    unixodbc-dev
 
-# Add Microsoft repo
+echo "=== Adding Microsoft package repo ==="
 curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
+curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list
 
-apt-get update
-ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
+echo "=== Installing ODBC Driver 17 for SQL Server ==="
+apt-get update -y
+ACCEPT_EULA=Y apt-get install -y msodbcsql17
 
-echo "=== Starting FastAPI app with gunicorn ==="
-gunicorn --bind=0.0.0.0:$PORT --timeout 600 -k uvicorn.workers.UvicornWorker app:app
+echo "=== Verifying driver installation ==="
+odbcinst -q -d
+
+echo "=== Starting FastAPI app with Gunicorn ==="
+exec gunicorn app:app --workers 1 --bind=0.0.0.0:8000 --timeout 600 -k uvicorn.workers.UvicornWorker
