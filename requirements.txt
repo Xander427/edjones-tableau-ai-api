@@ -1,5 +1,4 @@
 fastapi
 uvicorn
 gunicorn
-pyodbc==4.0.39  # stable with ODBC 17 on Azure Debian 12
 azure-identity
