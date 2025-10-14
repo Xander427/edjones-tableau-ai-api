@@ -13,6 +13,11 @@ echo "=== Adding Microsoft package repo ==="
 curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list
 
+echo "=== Removing any existing ODBC drivers ==="
+apt-get remove -y msodbcsql18 || true
+apt-get purge -y msodbcsql18 || true
+odbcinst -u -d -n "ODBC Driver 18 for SQL Server" || true
+
 echo "=== Installing ODBC Driver 17 for SQL Server ==="
 apt-get update -y
 ACCEPT_EULA=Y apt-get install -y msodbcsql17
