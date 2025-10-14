@@ -17,6 +17,11 @@ ACCEPT_EULA=Y apt-get install -y \
     unixodbc \
     unixodbc-dev
 
+echo "=== [Startup] Removing ODBC Driver 18 entries ==="
+odbcinst -u -d -n "ODBC Driver 18 for SQL Server" || true
+rm -f /usr/lib/x86_64-linux-gnu/odbc/libmsodbcsql-18*.so* || true
+rm -f /etc/odbcinst.ini.bak || true
+
 # Verify driver installation
 echo "=== [Startup] Verifying installed ODBC drivers ==="
 odbcinst -q -d || echo "Warning: No ODBC drivers found!"
