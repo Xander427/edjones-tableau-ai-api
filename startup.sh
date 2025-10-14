@@ -26,6 +26,13 @@ rm -f /etc/odbcinst.ini.bak || true
 echo "=== [Startup] Verifying installed ODBC drivers ==="
 odbcinst -q -d || echo "Warning: No ODBC drivers found!"
 
+echo "=== Testing pyodbc driver ==="
+python3 - <<'EOF'
+import pyodbc
+print("pyodbc version:", pyodbc.version)
+print("Drivers found:", pyodbc.drivers())
+EOF
+
 # Start FastAPI app using Gunicorn + Uvicorn worker
 echo "=== [Startup] Launching FastAPI app ==="
 exec gunicorn app:app \
