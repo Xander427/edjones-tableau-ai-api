@@ -1,5 +1,5 @@
 fastapi
 uvicorn
 gunicorn
-pyodbc
+pyodbc==4.0.39 #stable with odbc 17
 azure-identity
