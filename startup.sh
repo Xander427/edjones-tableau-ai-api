@@ -18,7 +18,8 @@ echo "=== [Startup] Removing ODBC Driver 17 ==="
 apt-get remove -y msodbcsql17 || true
 
 echo "=== [Startup] Installing ODBC Driver 18 ==="
-apt-get update
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+apt-get update -y
 ACCEPT_EULA=Y apt-get install -y msodbcsql18
 
 
