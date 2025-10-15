@@ -6,30 +6,25 @@ apt-get update -y && apt-get install -y \
     apt-transport-https \
     curl \
     gnupg \
-    unixodbc=2.3.11-2+deb12u1 \
-    unixodbc-dev=2.3.11-2+deb12u1 \
-    g++  # ensure compiler present
+    unixodbc \
+    unixodbc-dev \
+    g++
 
 echo "=== [Startup] Adding Microsoft package repo ==="
 curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list
 
-echo "=== [Startup] Removing ODBC Driver 18 entries ==="
-apt-get remove -y msodbcsql18 || true
-apt-get purge -y msodbcsql18 || true
-odbcinst -u -d -n "ODBC Driver 18 for SQL Server" || true
-
 echo "=== [Startup] Installing ODBC Driver 17 ==="
 apt-get update -y
-ACCEPT_EULA=Y apt-get install -y msodbcsql17=17.10.6.1-1
+ACCEPT_EULA=Y apt-get install -y msodbcsql17
 
-echo "=== [Startup] Installing pyodbc 4.0.39 ==="
-pip install --no-cache-dir pyodbc==4.0.39
+echo "=== [Startup] Reinstall pyodbc 5.2.0 ==="
+pip install --no-cache-dir --force-reinstall pyodbc==5.2.0
 
-echo "=== [Startup] Verifying ODBC drivers ==="
+echo "=== [Startup] Verify drivers ==="
 odbcinst -q -d
 
-echo "=== [Startup] Testing pyodbc ==="
+echo "=== [Startup] Test pyodbc ==="
 python3 - <<'EOF'
 import pyodbc
 print("pyodbc version:", pyodbc.version)
