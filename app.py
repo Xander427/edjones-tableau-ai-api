@@ -29,7 +29,7 @@ def get_db_connection():
     server = "azsqlserverejcampaignmanager.database.windows.net"
     database = "devazsqldbejcampaignmanager"
 
-    driver = "{ODBC Driver 17 for SQL Server}"
+    driver = "{ODBC Driver 18 for SQL Server}"
     encrypt = "yes"
     trust_cert = "no"
 

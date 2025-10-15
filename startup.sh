@@ -14,12 +14,16 @@ echo "=== [Startup] Adding Microsoft package repo ==="
 curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list
 
-echo "=== [Startup] Installing ODBC Driver 17 ==="
-apt-get update -y
-ACCEPT_EULA=Y apt-get install -y msodbcsql17
+echo "=== [Startup] Removing ODBC Driver 17 ==="
+apt-get remove -y msodbcsql17 || true
 
-echo "=== [Startup] Reinstall pyodbc 5.2.0 ==="
-pip install --no-cache-dir --force-reinstall pyodbc==5.2.0
+echo "=== [Startup] Installing ODBC Driver 18 ==="
+apt-get update
+ACCEPT_EULA=Y apt-get install -y msodbcsql18
+
+
+#echo "=== [Startup] Reinstall pyodbc 5.2.0 ==="
+#pip install --no-cache-dir --force-reinstall pyodbc==5.2.0
 
 echo "=== [Startup] Verify drivers ==="
 odbcinst -q -d
