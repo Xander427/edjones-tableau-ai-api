@@ -1,21 +1,21 @@
-import pyodbc
-from azure.identity import AzureCliCredential
+import os, pyodbc, time
 
-server = "azsqlserverejcampaignmanager.database.windows.net"
-database = "devazsqldbejcampaignmanager"
+print("pyodbc version:", pyodbc.version)
+print("Drivers:", [d for d in pyodbc.drivers()])
 
-credential = AzureCliCredential()
-token = credential.get_token("https://database.windows.net/.default")
-token_bytes = bytes(token.token, "utf-8")
+conn_str = os.getenv("AZURE_SQL_CONNECTION_STRING")
+print("Testing connect...")
 
-conn_str = (
-    f"Driver={{ODBC Driver 18 for SQL Server}};"
-    f"Server={server};Database={database};"
-    f"Authentication=ActiveDirectoryAccessToken;"
-    f"Encrypt=yes;TrustServerCertificate=no;"
-)
+try:
+    conn = pyodbc.connect(conn_str, timeout=5)
+    print("✅ Connected successfully")
+    cursor = conn.cursor()
+    cursor.execute("SELECT GETDATE()")
+    print("✅ Query ran:", cursor.fetchone())
+    cursor.close()
+    conn.close()
+    print("✅ Closed successfully")
+except Exception as e:
+    print("❌ Exception:", e)
 
-conn = pyodbc.connect(conn_str, attrs_before={1256: token_bytes})
-cursor = conn.cursor()
-cursor.execute("SELECT TOP 1 1")
-print(cursor.fetchone())
+time.sleep(10)
