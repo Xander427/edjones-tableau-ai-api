@@ -16,7 +16,7 @@ try:
 
     # Connection string
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        "DRIVER={ODBC Driver 17 for SQL Server};"
         "SERVER=azsqlserverejcampaignmanager.database.windows.net;"
         "DATABASE=devazsqldbejcampaignmanager;"
         "Encrypt=yes;TrustServerCertificate=no;"
