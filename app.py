@@ -20,7 +20,6 @@ class AskRequest(BaseModel):
 def healthcheck():
     return {"status": "ok"}
 
-# --- Database connection helper ---
 def get_db_connection():
     """
     Returns a pyodbc connection to Azure SQL Database.
@@ -41,29 +40,29 @@ def get_db_connection():
         f"Encrypt={encrypt};TrustServerCertificate={trust_cert};"
     )
 
-    # --- Detect OS ---
     if platform.system() == "Windows":
         # Windows local development
         credential = AzureCliCredential()
         token = credential.get_token("https://database.windows.net/.default")
 
-        # Token must be encoded for ODBC on Windows
-        exptoken = b''
+        exptoken = b""
         for i in bytes(token.token, "utf-8"):
             exptoken += bytes([i])
-            exptoken += b'\0'  # null byte after each char
+            exptoken += b"\0"
         tokenstruct = struct.pack("=i", len(exptoken)) + exptoken
 
         conn = pyodbc.connect(conn_str, attrs_before={1256: tokenstruct})
         return conn
 
     else:
-        # Linux / Azure App Service (managed identity)
+        # Linux / Azure App Service (Managed Identity)
         credential = DefaultAzureCredential()
         token = credential.get_token("https://database.windows.net/.default")
-        token_bytes = bytes(token.token, "utf-8")
 
-        conn = pyodbc.connect(conn_str, attrs_before={1256: token_bytes})
+        # ✅ Correct encoding for Linux
+        access_token = token.token.encode("utf-16-le")
+
+        conn = pyodbc.connect(conn_str, attrs_before={1256: access_token})
         return conn
 
 # --- Ask endpoint ---
