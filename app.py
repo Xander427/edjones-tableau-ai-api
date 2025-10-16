@@ -59,10 +59,11 @@ def get_db_connection():
         credential = DefaultAzureCredential()
         token = credential.get_token("https://database.windows.net/.default")
 
-        # ✅ Correct encoding for Linux
+        # Encode UTF-16-LE and pack length prefix
         access_token = token.token.encode("utf-16-le")
+        token_struct = struct.pack("=i", len(access_token)) + access_token
 
-        conn = pyodbc.connect(conn_str, attrs_before={1256: access_token})
+        conn = pyodbc.connect(conn_str, attrs_before={1256: token_struct})
         return conn
 
 # --- Ask endpoint ---
