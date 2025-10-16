@@ -6,12 +6,31 @@ print("Drivers:", pyodbc.drivers())
 print("Testing connect...")
 
 try:
-    token = DefaultAzureCredential().get_token("https://database.windows.net/.default")
+    # Acquire token
+    credential = DefaultAzureCredential()
+    token = credential.get_token("https://database.windows.net/.default")
     print("Token acquired:", token.token[:20] + "...")
-    access_token = token.token.encode('utf-16-le')
-    print("Access token (utf-16-le):", access_token[:20] + "...")
-    conn_str = "DRIVER={ODBC Driver 18 for SQL Server};SERVER=yourserver.database.windows.net;DATABASE=yourdb;Encrypt=yes;TrustServerCertificate=no;"
+
+    # Encode token properly for ODBC
+    access_token = bytes(token.token, "utf-16-le")
+
+    # Connection string
+    conn_str = (
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        "SERVER=azsqlserverejcampaignmanager.database.windows.net;"
+        "DATABASE=devazsqldbejcampaignmanager;"
+        "Encrypt=yes;TrustServerCertificate=no;"
+    )
+
+    # Connect using token
     conn = pyodbc.connect(conn_str, attrs_before={1256: access_token})
     print("✅ Connected successfully")
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT TOP 1 name FROM sys.databases")
+    print("Query result:", cursor.fetchone())
+
+    conn.close()
+
 except Exception as e:
     print("❌ Exception:", e)
