@@ -24,7 +24,18 @@ ACCEPT_EULA=Y apt-get install -y msodbcsql17=17.10.4.1-1
 
 echo "=== [Startup] Verify ODBC driver install ==="
 odbcinst -q -d || true
-ldd /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.*.so
+
+# Correct path for Debian 11 ODBC driver shared library
+if ls /usr/lib/x86_64-linux-gnu/libmsodbcsql-17.*.so.* 1> /dev/null 2>&1; then
+    echo "Driver library located in /usr/lib/x86_64-linux-gnu/"
+    ldd /usr/lib/x86_64-linux-gnu/libmsodbcsql-17.*.so.* || true
+else
+    echo "Driver library not found in expected path. Creating symlink (defensive)..."
+    mkdir -p /opt/microsoft/msodbcsql17/lib64
+    ln -s /usr/lib/x86_64-linux-gnu/libmsodbcsql-17.*.so.* /opt/microsoft/msodbcsql17/lib64/ || true
+    ldd /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.*.so.* || true
+fi
+
 
 echo "=== [Startup] Installing stable pyodbc version ==="
 pip install --no-cache-dir pyodbc==4.0.39
