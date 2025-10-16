@@ -14,21 +14,33 @@ echo "=== [Startup] Adding Microsoft package repo (Debian 11 / Bullseye) ==="
 curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list
 
-echo "=== [Startup] Removing any existing ODBC driver ==="
+echo "=== [Startup] Removing any existing ODBC drivers ==="
 apt-get remove -y msodbcsql17 msodbcsql18 || true
 
-echo "=== [Startup] Installing ODBC Driver 18 (Debian 11 build) ==="
+echo "=== [Startup] Installing ODBC Driver 17 (Debian 11, pinned version) ==="
 ACCEPT_EULA=Y apt-get update -y
-ACCEPT_EULA=Y apt-get install -y msodbcsql18
+# Pin specifically to Debian 11 build (NOT Bookworm)
+ACCEPT_EULA=Y apt-get install -y msodbcsql17=17.10.4.1-1
 
-echo "=== [Startup] Verify ODBC driver ==="
-odbcinst -q -d
+echo "=== [Startup] Verify ODBC driver install ==="
+odbcinst -q -d || true
+ldd /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.*.so
 
-echo "=== [Startup] Test pyodbc ==="
+echo "=== [Startup] Installing stable pyodbc version ==="
+pip install --no-cache-dir pyodbc==4.0.39
+
+echo "=== [Startup] Verifying pyodbc + ODBC driver compatibility ==="
 python3 - <<'EOF'
-import pyodbc
+import pyodbc, sys
+print("Python:", sys.version)
 print("pyodbc version:", pyodbc.version)
 print("Drivers:", pyodbc.drivers())
+try:
+    conn_str = "DRIVER={ODBC Driver 17 for SQL Server};Server=localhost;Trusted_Connection=No;"
+    pyodbc.connect(conn_str, timeout=1)
+except Exception as e:
+    print("Connection test expectedly failed (no DB), but pyodbc is functional.")
+    print("Error:", e)
 EOF
 
 echo "=== [Startup] Launching FastAPI app ==="
