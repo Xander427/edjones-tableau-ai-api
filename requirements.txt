@@ -3,3 +3,4 @@ uvicorn
 gunicorn
 azure-identity
 pyodbc
+openai
