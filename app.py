@@ -9,18 +9,21 @@ pyodbc.pooling = False # Disable connection pooling for token-based auth TEST
 import time
 import logging
 import os
+from fastapi.middleware.cors import CORSMiddleware 
+import openai
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
 
-
-credential = AzureCliCredential()
-
 app = FastAPI()
 
-# --- Pydantic model for requests ---
-class AskRequest(BaseModel):
-    question: str
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://tableau2.digital.accenture.com/"],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- Healthcheck endpoint ---
 @app.get("/")
@@ -52,6 +55,7 @@ def get_db_connection(retries=3, delay=3):
         try:
             if platform.system() == "Windows":
                 # Windows local development
+                
                 credential = AzureCliCredential()
                 token = credential.get_token("https://database.windows.net/.default")
 
@@ -87,6 +91,10 @@ def get_db_connection(retries=3, delay=3):
                 logger.error("❌ All connection attempts failed.")
                 raise
 
+# --- Pydantic model for requests ---
+class AskRequest(BaseModel):
+    question: str
+
 # --- Ask endpoint ---
 @app.post("/ask")
 async def ask(payload: AskRequest):
@@ -113,3 +121,65 @@ async def db_test():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+
+# --- Azure OpenAI Setup ---
+openai.api_type = "azure"
+openai.api_base = os.getenv("AZURE_OPENAI_ENDPOINT")  # e.g., https://my-openai-resource.openai.azure.com/
+openai.api_key = os.getenv("AZURE_OPENAI_KEY")
+openai.api_version = "2024-05-01-preview"  # or your deployed model API version
+
+
+class AIQueryRequest(BaseModel):
+    query: str
+
+
+@app.post("/ai_query")
+async def ai_query(payload: AIQueryRequest):
+    user_query = payload.query
+
+    if not user_query:
+        return {"error": "No query provided."}
+
+    # --- Step 1: Ask Azure OpenAI to generate SQL ---
+    prompt = f"""
+    You are a data assistant. Convert this natural-language question into a safe SQL query 
+    for Microsoft SQL Server. The database has views like v_CampaignManager, v_FacebookPaidSocial, etc.
+    But you probably only need view v_TableauData_30Days and table Tableau_31DaysandOlder.
+    Query: {user_query}
+    """
+
+    response = openai.ChatCompletion.create(
+        engine="gpt-4o-mini",  # or your deployed model
+        messages=[{"role": "system", "content": "You are a helpful SQL assistant."},
+                  {"role": "user", "content": prompt}],
+        temperature=0,
+        max_tokens=200
+    )
+
+    sql_query = response.choices[0].message["content"].strip()
+
+    # --- Step 2: Run SQL (safely) ---
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql_query)
+        columns = [desc[0] for desc in cursor.description]
+        rows = cursor.fetchall()
+        results = [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        return {"query": user_query, "sql": sql_query, "error": str(e)}
+
+    # --- Step 3: Summarize results ---
+    summary_prompt = f"Summarize these results briefly:\n{results}"
+    summary = openai.ChatCompletion.create(
+        engine="gpt-4o-mini",
+        messages=[{"role": "user", "content": summary_prompt}],
+        temperature=0.2
+    ).choices[0].message["content"]
+
+    return {
+        "query": user_query,
+        "sql": sql_query,
+        "summary": summary,
+        "rows": results[:10]  # show only top rows
+    }
