@@ -11,6 +11,7 @@ import logging
 import os
 from fastapi.middleware.cors import CORSMiddleware 
 from openai import AzureOpenAI
+import httpx
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
@@ -128,10 +129,15 @@ async def db_test():
 
 
 # --- Azure OpenAI Setup ---
+# ---- Custom httpx client with no proxies ----
+transport = httpx.HTTPTransport(retries=3)
+http_client = httpx.Client(transport=transport, proxies=None, timeout=60)
+
 client = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_KEY"),
     api_version="2025-01-01-preview",
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    http_client=http_client
 )
 
 class AIQueryRequest(BaseModel):
