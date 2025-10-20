@@ -3,4 +3,4 @@ uvicorn
 gunicorn
 azure-identity
 pyodbc
-openai==1.40.2
+openai==1.40.6
