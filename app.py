@@ -155,7 +155,8 @@ async def ai_query(payload: AIQueryRequest):
     prompt = f"""
     You are a data assistant. Convert this natural-language question into a safe SQL query 
     for Microsoft SQL Server. The database has views like v_CampaignManager, v_FacebookPaidSocial, etc.
-    But you probably only need view v_TableauData_30Days and table Tableau_31DaysandOlder.
+    But you probably only need view v_TableauData_30Days and table Tableau_31DaysandOlder. 
+    Return only valid SQL, do not include explanations or markdown.
     Query: {user_query}
     """
 
