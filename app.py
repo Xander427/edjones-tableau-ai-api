@@ -15,6 +15,11 @@ from openai import AzureOpenAI
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
 
+# --- Fix Azure App Service proxy bug ---
+for var in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"]:
+    os.environ.pop(var, None)
+#That will prevent Azure’s system proxy from being passed into the client’s constructor.
+
 app = FastAPI()
 
 app.add_middleware(
@@ -125,7 +130,7 @@ async def db_test():
 # --- Azure OpenAI Setup ---
 client = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_KEY"),
-    api_version="2024-05-01-preview",
+    api_version="2025-01-01-preview",
     azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
 )
 
