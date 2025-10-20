@@ -10,7 +10,7 @@ import time
 import logging
 import os
 from fastapi.middleware.cors import CORSMiddleware 
-import openai
+from openai import AzureOpenAI
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
@@ -123,11 +123,11 @@ async def db_test():
 
 
 # --- Azure OpenAI Setup ---
-openai.api_type = "azure"
-openai.api_base = os.getenv("AZURE_OPENAI_ENDPOINT")  # e.g., https://my-openai-resource.openai.azure.com/
-openai.api_key = os.getenv("AZURE_OPENAI_KEY")
-openai.api_version = "2024-05-01-preview"  # or your deployed model API version
-
+client = AzureOpenAI(
+    api_key=os.getenv("AZURE_OPENAI_KEY"),
+    api_version="2024-05-01-preview",
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+)
 
 class AIQueryRequest(BaseModel):
     query: str
@@ -148,15 +148,17 @@ async def ai_query(payload: AIQueryRequest):
     Query: {user_query}
     """
 
-    response = openai.ChatCompletion.create(
-        engine="gpt-4o-mini",  # or your deployed model
-        messages=[{"role": "system", "content": "You are a helpful SQL assistant."},
-                  {"role": "user", "content": prompt}],
-        temperature=0,
-        max_tokens=200
-    )
+    response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+        {"role": "system", "content": "You are a helpful SQL assistant."},
+        {"role": "user", "content": prompt}
+    ],
+    temperature=0,
+    max_tokens=200
+)
 
-    sql_query = response.choices[0].message["content"].strip()
+    sql_query = response.choices[0].message.content.strip()
 
     # --- Step 2: Run SQL (safely) ---
     try:
@@ -171,11 +173,11 @@ async def ai_query(payload: AIQueryRequest):
 
     # --- Step 3: Summarize results ---
     summary_prompt = f"Summarize these results briefly:\n{results}"
-    summary = openai.ChatCompletion.create(
-        engine="gpt-4o-mini",
+    summary = client.chat.completions.create(
+        model="gpt-4o-mini",
         messages=[{"role": "user", "content": summary_prompt}],
         temperature=0.2
-    ).choices[0].message["content"]
+    ).choices[0].message.content
 
     return {
         "query": user_query,
