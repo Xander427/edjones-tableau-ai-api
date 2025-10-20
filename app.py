@@ -131,7 +131,7 @@ async def db_test():
 # --- Azure OpenAI Setup ---
 # ---- Custom httpx client with no proxies ----
 transport = httpx.HTTPTransport(retries=3)
-http_client = httpx.Client(transport=transport, proxies=None, timeout=60)
+http_client = httpx.Client(transport=transport, timeout=60)
 
 client = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_KEY"),
