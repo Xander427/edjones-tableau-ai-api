@@ -133,12 +133,21 @@ async def db_test():
 transport = httpx.HTTPTransport(retries=3)
 http_client = httpx.Client(transport=transport, timeout=60)
 
+credential = DefaultAzureCredential()
+
 client = AzureOpenAI(
-    api_key=os.getenv("AZURE_OPENAI_KEY"),
-    api_version="2025-01-01-preview",
+    azure_ad_token_provider=credential,  # <-- instead of api_key
     azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    api_version="2025-01-01-preview",
     http_client=http_client
 )
+
+#client = AzureOpenAI(
+#    api_key=os.getenv("AZURE_OPENAI_KEY"),
+#    api_version="2025-01-01-preview",
+#    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+#    http_client=http_client
+#)
 
 class AIQueryRequest(BaseModel):
     query: str
@@ -154,10 +163,14 @@ async def ai_query(payload: AIQueryRequest):
     # --- Step 1: Ask Azure OpenAI to generate SQL ---
     prompt = f"""
     You are a data assistant. Convert this natural-language question into a safe SQL query 
-    for Microsoft SQL Server. The database has views like v_CampaignManager, v_FacebookPaidSocial, etc.
-    But you probably only need view v_TableauData_30Days and table Tableau_31DaysandOlder. 
-    Return only valid SQL, do not include explanations or markdown.
-    Query: {user_query}
+    for Microsoft SQL Server. The database has the following views and tables: 
+    - v_TableauData_30Days
+    - Tableau_31DaysandOlder
+
+    Return only **valid SQL**, do not include explanations, comments, or markdown.
+    Do not include any text outside the SQL query.
+
+    User question: {user_query}
     """
 
     response = client.chat.completions.create(
