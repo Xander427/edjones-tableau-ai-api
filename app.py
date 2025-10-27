@@ -135,8 +135,12 @@ http_client = httpx.Client(transport=transport, timeout=60)
 
 credential = DefaultAzureCredential()
 
+def token_provider():
+    token = credential.get_token("https://cognitiveservices.azure.com/.default")
+    return token.token  # return just the string
+
 client = AzureOpenAI(
-    azure_ad_token_provider=credential,  # <-- instead of api_key
+    azure_ad_token_provider=token_provider,  # <-- instead of api_key
     azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
     api_version="2025-01-01-preview",
     http_client=http_client
