@@ -5,7 +5,7 @@ from azure.identity import DefaultAzureCredential #pip install azure-identity
 from azure.identity import AzureCliCredential
 import struct
 import platform
-pyodbc.pooling = False # Disable connection pooling for token-based auth TEST
+pyodbc.pooling = True # Testing True
 import time
 import logging
 import os
