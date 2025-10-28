@@ -186,6 +186,7 @@ async def ai_query(payload: AIQueryRequest):
         callcount: number of calls,
         clicks: number of clicks,
         impressions: number of impressions,
+        mediaCost: media spend/budget,
         siteVisits: number of site visits,
         videoFullyPlayed: videos played completely, 100%,
         videoViews: video views,
@@ -247,7 +248,7 @@ async def ai_query(payload: AIQueryRequest):
         cursor.execute("""
             INSERT INTO Tableau_AI_QueryLog (user_query, sql_generated, rows_returned, summary, tableau_user)
             VALUES (?, ?, ?, ?, ?)
-        """, (user_query, sql_query, len(results), summary, "Unknown"))  # or detected user
+        """, (user_query, sql_query, len(results), summary[:4000], "Unknown"))  # or detected user
         conn.commit()
     except Exception as log_err:
         print("Logging failed:", log_err)
