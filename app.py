@@ -166,13 +166,13 @@ async def ai_query(payload: AIQueryRequest):
     
     schema_info = """
     The database contains advertising campaign performance data with the following tables (table name: description):
-        v_TableauData_30Days: view with last 31 days of data,
+        v_TableauData_30Days: view with last 31 days of data. This table is not necessary if querying data older than 31 days.
         Tableau_31DaysandOlder: table with data older than 32 days and up to 25 months old.
     
     These two tables have identical columns. Relevant columns and their descriptions are outlined below (column name: description):
         date: day,
         Campaign: campaign,
-        channel: media channel,
+        channel: media channel. Values include Connected TV, Paid Search, Article, TV, Skimms IG, Video - Pre-Roll, Display, None, Podcast, Paid Social, YouTube, Native, Video, Newsletter, Audio, DOOH
         AdSiteName: site of advertisement,
         FunnelStrategy: funnel strategy,
         journeyPhase: journey/funnel location. Values include Pre-Explore Awareness, None, Evaluate, Explore, Pre-Explore Familiarity,
@@ -202,6 +202,15 @@ async def ai_query(payload: AIQueryRequest):
 
     Return only **valid SQL**, do not include explanations, comments, or markdown.
     Do not include any text outside the SQL query.
+    Queries that reference both tables should use a UNION ALL in a subquery, e.g., 
+    SELECT ... 
+    FROM (
+        SELECT ... 
+        FROM v_TableauData_30Days  
+        UNION ALL
+        SELECT ...
+        FROM Tableau_31DaysandOlder
+    ) AS CombinedData
 
     User question: {user_query}
     """
