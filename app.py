@@ -163,13 +163,41 @@ async def ai_query(payload: AIQueryRequest):
 
     if not user_query:
         return {"error": "No query provided."}
+    
+    schema_info = """
+    The database contains advertising campaign performance data with the following tables (table name: description):
+        v_TableauData_30Days: view with last 31 days of data,
+        Tableau_31DaysandOlder: table with data older than 32 days and up to 25 months old.
+    
+    These two tables have identical columns. Relevant columns and their descriptions are outlined below (column name: description):
+        date: day,
+        Campaign: campaign,
+        channel: media channel,
+        AdSiteName: site of advertisement,
+        FunnelStrategy: funnel strategy,
+        journeyPhase: journey/funnel location. Values include Pre-Explore Awareness, None, Evaluate, Explore, Pre-Explore Familiarity,
+        Platform: Online Video platform (Hulu, Netflix, etc.), Publication (Meredith, WSJ, etc.), Audio Streaming site (Pandora, Spotify, etc.), Social Media platform (Instagram, Pinterest, etc.), etc.,
+        Placementobjective: objective of the ad buy,
+        Budget Source: funding/budget source,
+        IA Target: target income level. Values include None, HHI 30%, 75k, 100-249k, 250k, 50k,
+        Geographic: geography. Values include Designated Market Areas, National, High Net Worth, None, Local,
+        Target Audience: target audience,
+        Campaign Objective: ad objective. Values include Engagement, FA Lookup, Everfi Learners, Conversions, Prospect, Site Traffic, None, Awareness, Leads,
+        callcount: number of calls,
+        clicks: number of clicks,
+        impressions: number of impressions,
+        siteVisits: number of site visits,
+        videoFullyPlayed: videos played completely, 100%,
+        videoViews: video views,
+        Engaged Visits: engaged visits,
+        Leads: leads (applies only to pinterest data)
+    """
 
     # --- Step 1: Ask Azure OpenAI to generate SQL ---
     prompt = f"""
     You are a data assistant. Convert this natural-language question into a safe SQL query 
-    for Microsoft SQL Server. The database has the following views and tables: 
-    - v_TableauData_30Days
-    - Tableau_31DaysandOlder
+    for Microsoft SQL Server. All data is stored in two tables with the following schema:
+    {schema_info}
 
     Return only **valid SQL**, do not include explanations, comments, or markdown.
     Do not include any text outside the SQL query.
@@ -198,7 +226,12 @@ async def ai_query(payload: AIQueryRequest):
         rows = cursor.fetchall()
         results = [dict(zip(columns, row)) for row in rows]
     except Exception as e:
-        return {"query": user_query, "sql": sql_query, "error": str(e)}
+        return {
+            "query": user_query,
+            "sql": sql_query,
+            "error": str(e)[:300],  # truncate long ODBC errors
+            "summary": "The query could not be executed. Please rephrase or simplify."
+        }
 
     # --- Step 3: Summarize results ---
     summary_prompt = f"Summarize these results briefly:\n{results}"
@@ -207,6 +240,17 @@ async def ai_query(payload: AIQueryRequest):
         messages=[{"role": "user", "content": summary_prompt}],
         temperature=0.2
     ).choices[0].message.content
+
+    # --- Step 4: log to table ---
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO Tableau_AI_QueryLog (user_query, sql_generated, rows_returned, summary, tableau_user)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_query, sql_query, len(results), summary, "Unknown"))  # or detected user
+        conn.commit()
+    except Exception as log_err:
+        print("Logging failed:", log_err)
 
     return {
         "query": user_query,
