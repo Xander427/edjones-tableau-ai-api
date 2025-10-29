@@ -211,6 +211,7 @@ async def ai_query(payload: AIQueryRequest):
         SELECT ...
         FROM Tableau_31DaysandOlder
     ) AS CombinedData
+    Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit
 
     User question: {user_query}
     """
