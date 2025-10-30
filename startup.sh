@@ -37,8 +37,8 @@ else
 fi
 
 
-echo "=== [Startup] Installing stable pyodbc version ==="
-pip install --no-cache-dir pyodbc==4.0.39
+#echo "=== [Startup] Installing stable pyodbc version ==="
+#pip install --no-cache-dir pyodbc==4.0.39 #moved to requirements.txt
 
 echo "=== [Startup] Verifying pyodbc + ODBC driver compatibility ==="
 python3 - <<'EOF'

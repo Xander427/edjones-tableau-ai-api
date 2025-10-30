@@ -2,5 +2,7 @@ fastapi
 uvicorn
 gunicorn
 azure-identity
-pyodbc
+pyodbc==4.0.39
 openai==1.40.6
+pydantic>=2.0
+typing_extensions>=4.12.0
