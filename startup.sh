@@ -54,5 +54,8 @@ except Exception as e:
     print("Error:", e)
 EOF
 
+echo "=== [Startup] Set typing_extensions==4.12.2 pydantic==2.9.2 ==="
+pip install --upgrade --no-cache-dir typing_extensions==4.12.2 pydantic==2.9.2
+
 echo "=== [Startup] Launching FastAPI app ==="
 exec gunicorn app:app --workers 1 --bind=0.0.0.0:8000 --timeout 600 -k uvicorn.workers.UvicornWorker
