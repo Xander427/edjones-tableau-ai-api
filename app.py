@@ -30,7 +30,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://tableau2.digital.accenture.com/"],  
+    allow_origins=origins,  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -217,6 +217,7 @@ async def ai_query(payload: AIQueryRequest):
         FROM Tableau_31DaysandOlder
     ) AS CombinedData
     Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit
+    Not that there is a 1 day lag in data availability. We don't have any data for today.
 
     User question: {user_query}
     """
