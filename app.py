@@ -23,6 +23,11 @@ for var in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"]:
 
 app = FastAPI()
 
+origins = [
+    "https://witty-bush-00501930f.3.azurestaticapps.net",  # your SWA hostname
+    "https://tableau2.digital.accenture.com/"  # Tableau Server hostname
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://tableau2.digital.accenture.com/"],  
