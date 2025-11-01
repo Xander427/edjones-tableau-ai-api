@@ -25,7 +25,7 @@ app = FastAPI()
 
 origins = [
     "https://witty-bush-00501930f.3.azurestaticapps.net",  # your SWA hostname
-    "https://tableau2.digital.accenture.com/"  # Tableau Server hostname
+    "https://tableau2.digital.accenture.com"  # Tableau Server hostname
 ]
 
 app.add_middleware(
@@ -217,7 +217,7 @@ async def ai_query(payload: AIQueryRequest):
         FROM Tableau_31DaysandOlder
     ) AS CombinedData
     Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit
-    Not that there is a 1 day lag in data availability. We don't have any data for today.
+    Not that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
 
     User question: {user_query}
     """
