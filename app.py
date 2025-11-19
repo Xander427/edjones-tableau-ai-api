@@ -175,28 +175,31 @@ async def ai_query(payload: AIQueryRequest):
         Tableau_31DaysandOlder: table with data older than 32 days and up to 25 months old.
     
     These two tables have identical columns. Relevant columns and their descriptions are outlined below (column name: description):
-        date: day,
-        Campaign: campaign,
-        channel: media channel. Values include Connected TV, Paid Search, Article, TV, Skimms IG, Video - Pre-Roll, Display, None, Podcast, Paid Social, YouTube, Native, Video, Newsletter, Audio, DOOH
-        AdSiteName: site of advertisement,
-        FunnelStrategy: funnel strategy,
-        journeyPhase: journey/funnel location. Values include Pre-Explore Awareness, None, Evaluate, Explore, Pre-Explore Familiarity,
-        Platform: Online Video platform (Hulu, Netflix, etc.), Publication (Meredith, WSJ, etc.), Audio Streaming site (Pandora, Spotify, etc.), Social Media platform (Instagram, Pinterest, etc.), etc.,
-        Placementobjective: objective of the ad buy,
-        Budget Source: funding/budget source,
-        IA Target: target income level. Values include None, HHI 30%, 75k, 100-249k, 250k, 50k,
-        Geographic: geography. Values include Designated Market Areas, National, High Net Worth, None, Local,
-        Target Audience: target audience,
-        Campaign Objective: ad objective. Values include Engagement, FA Lookup, Everfi Learners, Conversions, Prospect, Site Traffic, None, Awareness, Leads,
-        callcount: number of calls,
-        clicks: number of clicks,
-        impressions: number of impressions,
-        mediaCost: media spend/budget,
-        siteVisits: number of site visits,
-        videoFullyPlayed: videos played completely, 100%,
-        videoViews: video views,
-        Engaged Visits: engaged visits,
-        Leads: leads (applies only to pinterest data)
+        date: day.
+        Campaign: campaign.
+        channel: media channel. Values include Connected TV, Paid Search, Article, TV, Skimms IG, Video - Pre-Roll, Display, None, Podcast, Paid Social, YouTube, Native, Video, Newsletter, Audio, DOOH.
+        AdSiteName: site of advertisement.
+        FunnelStrategy: funnel strategy.
+        journeyPhase: journey/funnel location. Values include Pre-Explore Awareness, None, Evaluate, Explore, Pre-Explore Familiarity.
+        Platform: Online Video platform (Hulu, Netflix, etc.), Publication (Meredith, WSJ, etc.), Audio Streaming site (Pandora, Spotify, etc.), Social Media platform (Instagram, Pinterest, etc.), etc.
+        Placementobjective: objective of the ad buy.
+        Budget Source: funding/budget source.
+        IA Target: target income level. Values include None, HHI 30%, 75k, 100-249k, 250k, 50k.
+        Geographic: geography. Values include Designated Market Areas, National, High Net Worth, None, Local.
+        Targeting Strategy: Values include Hyper Local Targeting, 1st Party Audience Data, Demographic Targeting Only,Google Custom Intent, Recency RTG, Retargeting Targeting, Lookalike Modeling
+            Topic Targeting, Google Custom Affinity, Specific Site List, Google In Market, Keyword Contextual, Run of Site Targeting, Video Retargeting, Multiple Targeting Methods, Google Affinity Data
+            None, Run of Network Targeting, Behavioral Targeting, Website Retargeting, Contextual Targeting.
+        Target Audience: target audience.
+        Campaign Objective: ad objective. Values include Engagement, FA Lookup, Everfi Learners, Conversions, Prospect, Site Traffic, None, Awareness, Leads.
+        callcount: number of calls.
+        clicks: number of clicks.
+        impressions: number of impressions.
+        mediaCost: media spend/budget.
+        siteVisits: number of site visits.
+        videoFullyPlayed: videos played completely, 100%.
+        videoViews: video views.
+        Engaged Visits: engaged visits.
+        Leads: leads (applies only to pinterest data).
     """
 
     # --- Step 1: Ask Azure OpenAI to generate SQL ---
@@ -216,8 +219,8 @@ async def ai_query(payload: AIQueryRequest):
         SELECT ...
         FROM Tableau_31DaysandOlder
     ) AS CombinedData
-    Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit
-    Not that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
+    Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions).
+    Note that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
 
     User question: {user_query}
     """
@@ -268,10 +271,12 @@ async def ai_query(payload: AIQueryRequest):
         conn.commit()
     except Exception as log_err:
         print("Logging failed:", log_err)
+    
+    # --- Step 5: create Tableau filters ---
 
     return {
         "query": user_query,
         "sql": sql_query,
         "summary": summary,
-        "rows": results[:10]  # show only top rows
+        "rows": results[:25]  # show only top rows
     }
