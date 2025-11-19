@@ -12,6 +12,7 @@ import os
 from fastapi.middleware.cors import CORSMiddleware 
 from openai import AzureOpenAI
 import httpx
+import re
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
@@ -24,7 +25,7 @@ for var in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"]:
 app = FastAPI()
 
 origins = [
-    "https://witty-bush-00501930f.3.azurestaticapps.net",  # your SWA hostname
+    "https://witty-bush-00501930f.3.azurestaticapps.net",  # static web app hostname
     "https://tableau2.digital.accenture.com"  # Tableau Server hostname
 ]
 
@@ -102,6 +103,26 @@ def get_db_connection(retries=3, delay=3):
                 logger.error("❌ All connection attempts failed.")
                 raise
 
+
+#for Tableau filter extraction
+def extract_filters_from_query(user_query: str):
+    filters = {}
+    query_lower = user_query.lower()
+
+    for field, values in FILTER_MAP.items():
+        matched_values = []
+        for value in values:
+            if not value or value.lower() == "none":
+                continue
+            # use regex to avoid partial false positives
+            pattern = r"\b" + re.escape(value.lower()) + r"\b"
+            if re.search(pattern, query_lower):
+                matched_values.append(value)
+        if matched_values:
+            filters[field] = matched_values
+    return filters
+
+
 # --- Pydantic model for requests ---
 class AskRequest(BaseModel):
     question: str
@@ -131,6 +152,48 @@ async def db_test():
             return {"status": "ok", "last_question": row[0] if row else None}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    
+# --- Tableau Filter Map ---
+
+FILTER_MAP = {
+    "Channel": [
+        "Podcast", "Paid Social", "YouTube", "Native", "Video", "Newsletter",
+        "Connected TV", "Paid Search", "Article", "TV", "Skimms IG", "Audio",
+        "DOOH", "Video - Pre-Roll", "Display", "None"
+    ],
+    "Platform": [
+        "Hulu", "SoundCloud", "Nativo", "Instagram", "NGC", "Discovery Plus",
+        "Spotify", "The Street Editorial", "Netflix", "ABC", "HTS", "TRU",
+        "Paramount", "FBN", "FS1", "TBS", "NULL", "NBAT", "ENT", "Pandora",
+        "NASDAQ", "LinkedIn", "GOLF", "ESP2", "ESPN", "Meredith", "WSJ",
+        "Vox", "Disney", "She Media", "Facebook", "CBS", "CNBC",
+        "The Trade Desk", "Bleacher Report", "Amazon", "Bing", "NPR",
+        "SiriusXM", "FOX", "USA", "DV360", "TheSkimm", "PARC", "Google",
+        "Pinterest", "NBC", "TNT", "PARB"
+    ],
+    "Date Granularity": ["Day", "Week", "Month", "Quarter", "Year"],
+    "JourneyPhase": [
+        "journeyPhase", "Explore", "Pre-Explore Familiarity",
+        "Pre-Explore Awareness", "None", "Evaluate"
+    ],
+    "Publisher": [
+        "Wall Street Journal", "Nativo", "Roku", "YouTube", "Netflix",
+        "Paramount", "USA Today", "Conde Nast", "Nasdaq", "Meredith",
+        "The Trade Desk", "Discovery", "SiriusXM", "TripleLift",
+        "None", "NBC", "Pinterest"
+    ],
+    "Targeting Strategy": [
+        "Hyper Local Targeting", "1st Party Audience Data", "Demographic Targeting Only",
+        "Google Custom Intent", "Recency RTG", "Retargeting Targeting",
+        "Lookalike Modeling", "Topic Targeting", "Google Custom Affinity",
+        "Specific Site List", "Google In Market", "Keyword Contextual",
+        "Run of Site Targeting", "Video Retargeting", "Multiple Targeting Methods",
+        "Google Affinity Data", "None", "Run of Network Targeting",
+        "Behavioral Targeting", "Website Retargeting", "Contextual Targeting"
+    ],
+    "Branded": ["Non-Brand", "Brand", "None"]
+}
+
 
 
 # --- Azure OpenAI Setup ---
@@ -273,10 +336,12 @@ async def ai_query(payload: AIQueryRequest):
         print("Logging failed:", log_err)
     
     # --- Step 5: create Tableau filters ---
+    filters = extract_filters_from_query(user_query)
 
     return {
         "query": user_query,
         "sql": sql_query,
         "summary": summary,
-        "rows": results[:25]  # show only top rows
+        "rows": results[:25],  # show only top rows
+        "filters": filters
     }
