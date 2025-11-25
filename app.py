@@ -171,7 +171,7 @@ FILTER_MAP = {
         "SiriusXM", "FOX", "USA", "DV360", "TheSkimm", "PARC", "Google",
         "Pinterest", "NBC", "TNT", "PARB"
     ],
-    "Date Granularity Selector": ["Day", "Week", "Month", "Quarter", "Year"],
+    "Date Granularity": ["Day", "Week", "Month", "Quarter", "Year"],
     "Journey Phase": [
         "journeyPhase", "Explore", "Pre-Explore Familiarity",
         "Pre-Explore Awareness", "None", "Evaluate"
