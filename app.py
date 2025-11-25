@@ -171,8 +171,8 @@ FILTER_MAP = {
         "SiriusXM", "FOX", "USA", "DV360", "TheSkimm", "PARC", "Google",
         "Pinterest", "NBC", "TNT", "PARB"
     ],
-    "Date Granularity": ["Day", "Week", "Month", "Quarter", "Year"],
-    "JourneyPhase": [
+    "Date Granularity Selector": ["Day", "Week", "Month", "Quarter", "Year"],
+    "Journey Phase": [
         "journeyPhase", "Explore", "Pre-Explore Familiarity",
         "Pre-Explore Awareness", "None", "Evaluate"
     ],
@@ -191,7 +191,7 @@ FILTER_MAP = {
         "Google Affinity Data", "None", "Run of Network Targeting",
         "Behavioral Targeting", "Website Retargeting", "Contextual Targeting"
     ],
-    "Branded": ["Non-Brand", "Brand", "None"]
+    "Brand vs NB": ["Non-Brand", "Brand", "None"]
 }
 
 
@@ -282,8 +282,9 @@ async def ai_query(payload: AIQueryRequest):
         SELECT ...
         FROM Tableau_31DaysandOlder
     ) AS CombinedData
-    Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions).
+    Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions), EV = Engaged Visits, TTD = The Trade Desk.
     Note that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
+    INTERVAL should not be used for date ranges (it is not valid SQL); use DATEADD and DATEDIFF functions instead.
 
     User question: {user_query}
     """
