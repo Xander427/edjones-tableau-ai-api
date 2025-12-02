@@ -186,7 +186,7 @@ FILTER_MAP = {
 
   "Geography": ["Dallas", "DC", "National", "None", "Seattle"],
 
-  "Publisher": [
+  "Publisher   ": [
     "Null", "ABC", "Amazon", "Bing", "Bloomberg", "Business Insider", "CBS", "CNBC",
     "Conde Nast", "Demand Gen", "Discovery", "Disney", "Disney DSE", "DV360", "ENT",
     "ESP2", "ESPN", "ESPN DSE", "Facebook", "FBN", "Forbes", "FOX", "FS1", "GOLF",
