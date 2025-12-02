@@ -104,23 +104,39 @@ def get_db_connection(retries=3, delay=3):
                 raise
 
 
-#for Tableau filter extraction
+# Improved filter extraction with value prioritization
 def extract_filters_from_query(user_query: str):
     filters = {}
     query_lower = user_query.lower()
 
     for field, values in FILTER_MAP.items():
+
+        # Sort longest → shortest to prevent "Video" matching before "Video - Pre-Roll"
+        sorted_values = sorted(values, key=lambda v: len(v or ""), reverse=True)
+
         matched_values = []
-        for value in values:
+        matched_text = set()
+
+        for value in sorted_values:
             if not value or value.lower() == "none":
                 continue
-            # use regex to avoid partial false positives
-            pattern = r"\b" + re.escape(value.lower()) + r"\b"
+
+            val_lower = value.lower()
+            pattern = r"\b" + re.escape(val_lower) + r"\b"
+
             if re.search(pattern, query_lower):
+                # Avoid conflicts: if a longer match already covered this text, skip it
+                if any(val_lower in m for m in matched_text):
+                    continue
+
                 matched_values.append(value)
+                matched_text.add(val_lower)
+
         if matched_values:
             filters[field] = matched_values
+
     return filters
+
 
 
 # --- Pydantic model for requests ---
@@ -156,44 +172,88 @@ async def db_test():
 # --- Tableau Filter Map ---
 
 FILTER_MAP = {
-    "Channel": [
-        "Podcast", "Paid Social", "YouTube", "Native", "Video", "Newsletter",
-        "Connected TV", "Paid Search", "Article", "TV", "Skimms IG", "Audio",
-        "DOOH", "Video - Pre-Roll", "Display", "None"
-    ],
-    "Platform": [
-        "Hulu", "SoundCloud", "Nativo", "Instagram", "NGC", "Discovery Plus",
-        "Spotify", "The Street Editorial", "Netflix", "ABC", "HTS", "TRU",
-        "Paramount", "FBN", "FS1", "TBS", "NULL", "NBAT", "ENT", "Pandora",
-        "NASDAQ", "LinkedIn", "GOLF", "ESP2", "ESPN", "Meredith", "WSJ",
-        "Vox", "Disney", "She Media", "Facebook", "CBS", "CNBC",
-        "The Trade Desk", "Bleacher Report", "Amazon", "Bing", "NPR",
-        "SiriusXM", "FOX", "USA", "DV360", "TheSkimm", "PARC", "Google",
-        "Pinterest", "NBC", "TNT", "PARB"
-    ],
-    "Date Granularity": ["Day", "Week", "Month", "Quarter", "Year"],
-    "Journey Phase": [
-        "journeyPhase", "Explore", "Pre-Explore Familiarity",
-        "Pre-Explore Awareness", "None", "Evaluate"
-    ],
-    "Publisher": [
-        "Wall Street Journal", "Nativo", "Roku", "YouTube", "Netflix",
-        "Paramount", "USA Today", "Conde Nast", "Nasdaq", "Meredith",
-        "The Trade Desk", "Discovery", "SiriusXM", "TripleLift",
-        "None", "NBC", "Pinterest"
-    ],
-    "Targeting Strategy": [
-        "Hyper Local Targeting", "1st Party Audience Data", "Demographic Targeting Only",
-        "Google Custom Intent", "Recency RTG", "Retargeting Targeting",
-        "Lookalike Modeling", "Topic Targeting", "Google Custom Affinity",
-        "Specific Site List", "Google In Market", "Keyword Contextual",
-        "Run of Site Targeting", "Video Retargeting", "Multiple Targeting Methods",
-        "Google Affinity Data", "None", "Run of Network Targeting",
-        "Behavioral Targeting", "Website Retargeting", "Contextual Targeting"
-    ],
-    "Brand vs NB": ["Non-Brand", "Brand", "None"]
-}
+  "Measure Names": [
+    "Allowed Ads", "Authenticated Traffic", "CP EV", "CP FALU", "CP Lead", "CPC", "CPCV",
+    "CPL + Calls", "CPM", "CPSV", "CPVV", "CTR", "Call Count (Google Only)", "Clicks",
+    "Clicks to Call", "Engaged Visits", "Engaged Visits Pinterest", "Engaged Visits Total",
+    "FALUs", "Fraud/SIVT Free Ads", "Fraud/SIVT Incidents", "Fraud/SIVT Rate",
+    "Impressions", "Leads", "Leads + Calls", "Leads Pinterest", "Leads Total",
+    "Measured Impressions", "Media Spend", "Paid Social Fees",
+    "Paid Social Spend - Raw", "Qualified Site Visitor", "Site Visits", "Site Visits_CM",
+    "TotalConversions", "Unique Incidents", "VCR", "VVR", "Video Complete", 
+    "Video Views", "VideoPlays", "Viewability", "Viewable Impressions"
+  ],
 
+  "Geography": ["Dallas", "DC", "National", "None", "Seattle"],
+
+  "Publisher": [
+    "Null", "ABC", "Amazon", "Bing", "Bloomberg", "Business Insider", "CBS", "CNBC",
+    "Conde Nast", "Demand Gen", "Discovery", "Disney", "Disney DSE", "DV360", "ENT",
+    "ESP2", "ESPN", "ESPN DSE", "Facebook", "FBN", "Forbes", "FOX", "FS1", "GOLF",
+    "Google", "HTS", "Hulu", "Hulu DSE", "Hulu Slate", "Instagram", "Investing.com",
+    "LinkedIn", "Meredith", "Nasdaq", "Nativo", "NBAT", "NBC", "Netflix", "NGC",
+    "None", "NPR", "Pandora", "Paramount", "PARB", "PARC", "Pinterest", "Reuters",
+    "Roku", "She Media", "Sirius XM", "Spotify", "SWYM", "TBS", "The Street",
+    "The Trade Desk", "TNT", "Triplelift", "TRU", "Uber", "USA", "USA Today", 
+    "Vox", "Wall Street Journal", "YouTube"
+  ],
+
+  "Brand vs NB": ["Brand", "Non-Brand", "Null"],
+
+  "Main Audience Group": [
+    "$250K - Adults 25-64, $250K+ IA",
+    "$250K - Adults 30-49, $250K+ IA",
+    "BrandA25-64, HHI $75K+",
+    "Other",
+    "Women - W30-49, HHI $75k+"
+  ],
+
+  "Sub-Audience 1": [
+    "Mindset - Career Changer", "Mindset - Generic", "Mindset - Golden Years",
+    "Mindset - Life Improvers", "Mindset - Money Maker", "Other"
+  ],
+
+  "Sub-Audience 2": [
+    "FAN LAL", "Other", "Platform Lookalike", "Website Retargeting"
+  ],
+
+  "Campaign Category": ["250K", "EdWoW", "GenNext", "Investor", "NA", "PIC", "PII"],
+
+  "FunnelStrategy": ["Null", "Brand", "NA", "Performance", "Quarter 2"],
+
+  "Platform": [
+    "Null", "ABC", "Amazon", "Bing", "Bleacher Report", "CBS", "CNBC",
+    "Discovery Plus", "Disney", "DV360", "ENT", "ESP2", "ESPN", "Facebook",
+    "FBN", "FOX", "FS1", "GOLF", "Google", "HTS", "Hulu", "Instagram",
+    "LinkedIn", "Meredith", "NASDAQ", "Nativo", "NBAT", "NBC", "Netflix",
+    "NGC", "NPR", "Pandora", "Paramount", "PARB", "PARC", "Pinterest",
+    "She Media", "SiriusXM", "SoundCloud", "Spotify", "TBS",
+    "The Street Editorial", "The Trade Desk", "TheSkimm", "TNT", "TRU",
+    "USA", "Vox", "WSJ"
+  ],
+
+  "Targeting Strategy": [
+    "Null", "1st Party Audience Data", "Behavioral Targeting",
+    "Contextual Targeting", "Demographic Targeting Only",
+    "Google Affinity Data", "Google Custom Affinity",
+    "Google Custom Intent", "Google In Market", "Hyper Local Targeting",
+    "Keyword Contextual", "Lookalike Modeling",
+    "Multiple Targeting Methods", "None", "Recency RTG",
+    "Retargeting Targeting", "Run of Network Targeting",
+    "Run of Site Targeting", "Specific Site List", "Topic Targeting",
+    "Video Retargeting", "Website Retargeting"
+  ],
+
+  "Channel": [
+    "Article", "Audio", "Connected TV", "Display", "DOOH", "Native",
+    "Newsletter", "None", "Paid Search", "Paid Social", "Podcast",
+    "Skimms IG", "TV", "Video", "Video - Pre-Roll", "YouTube"
+  ],
+
+  "Journey Phase": [
+    "Evaluate", "Explore", "None", "Pre-Explore Awareness", "Pre-Explore Familiarity"
+  ]
+}
 
 
 # --- Azure OpenAI Setup ---
