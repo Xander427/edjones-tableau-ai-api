@@ -254,6 +254,9 @@ FILTER_MAP = {
     "Evaluate", "Explore", "None", "Pre-Explore Awareness", "Pre-Explore Familiarity"
   ],
 
+    #DATE is a range filter, so no domain list needed
+  "date": "RANGE",
+
   "Date Granularity": ["Year", "Quarter", "Month", "Week", "Day"]
 }
 
