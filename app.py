@@ -252,7 +252,9 @@ FILTER_MAP = {
 
   "Journey Phase": [
     "Evaluate", "Explore", "None", "Pre-Explore Awareness", "Pre-Explore Familiarity"
-  ]
+  ],
+
+  "Date Granularity": ["Year", "Quarter", "Month", "Week", "Day"]
 }
 
 
