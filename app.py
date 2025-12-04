@@ -13,6 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from openai import AzureOpenAI
 import httpx
 import re
+from datetime import datetime, date
+import calendar
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
@@ -104,16 +106,125 @@ def get_db_connection(retries=3, delay=3):
                 raise
 
 
-# Improved filter extraction with value prioritization
+def parse_date_from_query(query: str):
+    """Extract date range from natural language query"""
+    query_lower = query.lower()
+    today = date.today()
+    
+    # ==== YEAR DETECTION ====
+    year_match = re.search(r'\b(20\d{2})\b', query)
+    if year_match:
+        year = int(year_match.group(1))
+        start_date = f"{year}-01-01"
+        end_date = f"{year}-12-31"
+        return {
+            "field": "date",
+            "values": [start_date, end_date]
+        }
+    
+    # ==== QUARTER DETECTION ====
+    quarter_match = re.search(r'(q[1-4]|quarter\s+[1-4])\s+(20\d{2})', query_lower)
+    if quarter_match:
+        quarter = int(re.search(r'[1-4]', quarter_match.group(1)).group())
+        year = int(quarter_match.group(2))
+        
+        month_map = {1: 1, 2: 4, 3: 7, 4: 10}
+        start_month = month_map[quarter]
+        end_month = start_month + 2
+        
+        start_date = f"{year}-{start_month:02d}-01"
+        last_day = calendar.monthrange(year, end_month)[1]
+        end_date = f"{year}-{end_month:02d}-{last_day:02d}"
+        
+        return {
+            "field": "date",
+            "values": [start_date, end_date]
+        }
+    
+    # ==== MONTH DETECTION ====
+    month_names = {
+        'january': 1, 'february': 2, 'march': 3, 'april': 4,
+        'may': 5, 'june': 6, 'july': 7, 'august': 8,
+        'september': 9, 'october': 10, 'november': 11, 'december': 12
+    }
+    
+    month_match = re.search(r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+(20\d{2})', query_lower)
+    if month_match:
+        month_name = month_match.group(1)
+        month_num = month_names[month_name]
+        year = int(month_match.group(2))
+        
+        start_date = f"{year}-{month_num:02d}-01"
+        last_day = calendar.monthrange(year, month_num)[1]
+        end_date = f"{year}-{month_num:02d}-{last_day:02d}"
+        
+        return {
+            "field": "date",
+            "values": [start_date, end_date]
+        }
+    
+    # ==== RELATIVE DATES ====
+    if "last month" in query_lower:
+        if today.month == 1:
+            start_date = date(today.year - 1, 12, 1)
+        else:
+            start_date = date(today.year, today.month - 1, 1)
+        
+        end_date = date(today.year, today.month, 1) - timedelta(days=1)
+        
+        return {
+            "field": "date",
+            "values": [str(start_date), str(end_date)]
+        }
+    
+    if "last quarter" in query_lower:
+        current_quarter = (today.month - 1) // 3 + 1
+        if current_quarter == 1:
+            quarter = 4
+            year = today.year - 1
+        else:
+            quarter = current_quarter - 1
+            year = today.year
+        
+        month_map = {1: 1, 2: 4, 3: 7, 4: 10}
+        start_month = month_map[quarter]
+        end_month = start_month + 2
+        
+        start_date = f"{year}-{start_month:02d}-01"
+        last_day = calendar.monthrange(year, end_month)[1]
+        end_date = f"{year}-{end_month:02d}-{last_day:02d}"
+        
+        return {
+            "field": "date",
+            "values": [start_date, end_date]
+        }
+    
+    # ==== YEAR-TO-DATE ====
+    if "ytd" in query_lower or "year to date" in query_lower:
+        start_date = f"{today.year}-01-01"
+        end_date = str(today)
+        return {
+            "field": "date",
+            "values": [start_date, end_date]
+        }
+    
+    return None
+
+#enhanced filter extraction to include value prioritization and date ranges
 def extract_filters_from_query(user_query: str):
+    """Enhanced to include date range detection"""
     filters = {}
     query_lower = user_query.lower()
 
+    # Extract standard categorical filters (your existing logic)
     for field, values in FILTER_MAP.items():
-
-        # Sort longest → shortest to prevent "Video" matching before "Video - Pre-Roll"
+        if values == "RANGE":  # Skip range filters in value matching
+            continue
+            
+        # ... your existing categorical filter matching logic ...
+        # (keep everything you currently have for Publisher, Platform, etc.)
         sorted_values = sorted(values, key=lambda v: len(v or ""), reverse=True)
-
+        
         matched_values = []
         matched_text = set()
 
@@ -125,7 +236,6 @@ def extract_filters_from_query(user_query: str):
             pattern = r"\b" + re.escape(val_lower) + r"\b"
 
             if re.search(pattern, query_lower):
-                # Avoid conflicts: if a longer match already covered this text, skip it
                 if any(val_lower in m for m in matched_text):
                     continue
 
@@ -134,6 +244,12 @@ def extract_filters_from_query(user_query: str):
 
         if matched_values:
             filters[field] = matched_values
+
+    # NEW: Extract date range
+    date_filter = parse_date_from_query(user_query)
+    if date_filter:
+        filters[date_filter["field"]] = date_filter["values"]
+        print(f"Detected date filter: {date_filter['values']}")
 
     return filters
 
