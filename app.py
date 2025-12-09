@@ -27,7 +27,7 @@ for var in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"]:
 app = FastAPI()
 
 origins = [
-    "https://witty-bush-00501930f.3.azurestaticapps.net",  # static web app hostname
+  #  "https://witty-bush-00501930f.3.azurestaticapps.net",  # static web app hostname
     "https://tableau2.digital.accenture.com"  # Tableau Server hostname
 ]
 
@@ -254,6 +254,19 @@ def extract_filters_from_query(user_query: str):
     return filters
 
 
+def sanitize_user_query(text: str) -> str:
+    if not text:
+        return ""
+    
+    # Remove control characters
+    text = re.sub(r"[\x00-\x1F\x7F]", " ", text)
+
+    # Collapse repeated whitespace
+    text = re.sub(r"\s+", " ", text)
+
+    # Limit length (prevents abuse)
+    return text[:2000].strip()
+
 
 # --- Pydantic model for requests ---
 class AskRequest(BaseModel):
@@ -408,7 +421,8 @@ class AIQueryRequest(BaseModel):
 
 @app.post("/ai_query")
 async def ai_query(payload: AIQueryRequest):
-    user_query = payload.query
+    
+    user_query = sanitize_user_query(payload.query)
 
     if not user_query:
         return {"error": "No query provided."}
@@ -422,7 +436,6 @@ async def ai_query(payload: AIQueryRequest):
         date: day.
         Campaign: campaign.
         channel: media channel. Values include Connected TV, Paid Search, Article, TV, Skimms IG, Video - Pre-Roll, Display, None, Podcast, Paid Social, YouTube, Native, Video, Newsletter, Audio, DOOH.
-        AdSiteName: site of advertisement.
         FunnelStrategy: funnel strategy.
         journeyPhase: journey/funnel location. Values include Pre-Explore Awareness, None, Evaluate, Explore, Pre-Explore Familiarity.
         Platform: Online Video platform (Hulu, Netflix, etc.), Publication (Meredith, WSJ, etc.), Audio Streaming site (Pandora, Spotify, etc.), Social Media platform (Instagram, Pinterest, etc.), etc.
