@@ -39,17 +39,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#Require both Origin and Referer headers to match origins. This prevents casual misuse via web pages on other origins. 
+#Require both Origin headers to match origins. This prevents casual misuse via web pages on other origins. 
 @app.middleware("http")
 async def check_origin(request: Request, call_next):
+    # Allow preflight OPTIONS requests to pass through untouched
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
     origin = request.headers.get("origin")
-    #referer = request.headers.get("referer")
+
     if origin and origin not in origins:
         raise HTTPException(status_code=403, detail="Origin not allowed")
-    # Optional: check referer contains tableau host if you want
-    # if referer and "tableau2.digital.accenture.com" not in referer:
-    #     raise HTTPException(status_code=403, detail="Referer not allowed")
+
     return await call_next(request)
+
 
 # --- Healthcheck endpoint ---
 @app.get("/")
