@@ -454,9 +454,9 @@ async def ai_query(payload: AIQueryRequest):
         channel: media channel. Values include Connected TV, Paid Search, Article, TV, Skimms IG, Video - Pre-Roll, Display, None, Podcast, Paid Social, YouTube, Native, Video, Newsletter, Audio, DOOH.
         FunnelStrategy: funnel strategy.
         journeyPhase: journey/funnel location. Values include Pre-Explore Awareness, None, Evaluate, Explore, Pre-Explore Familiarity.
-        Platform: Values include "ABC", "Amazon", "Bing", "Bleacher Report", "CBS", "CNBC", "Discovery Plus", "Disney", "DV360", "ENT", "ESP2", "ESPN", "Facebook", "FBN", "FOX", "FS1", "GOLF", "Google", "HTS", "Hulu", "Instagram",
-            "LinkedIn", "Meredith", "NASDAQ", "Nativo", "NBAT", "NBC", "Netflix", "NGC", "NPR", "Pandora", "Paramount", "PARB", "PARC", "Pinterest", "She Media", "SiriusXM", "SoundCloud", "Spotify", "TBS",
-            "The Street Editorial", "The Trade Desk", "TheSkimm", "TNT", "TRU", "USA", "Vox", "WSJ"
+        Platform: Values include ABC, Amazon, Bing, Bleacher Report, CBS, CNBC, Discovery Plus, Disney, DV360, ENT, ESP2, ESPN, Facebook, FBN, FOX, FS1, GOLF, Google, HTS, Hulu, Instagram,
+            LinkedIn, Meredith, NASDAQ, Nativo, NBAT, NBC, Netflix, NGC, NPR, Pandora, Paramount, PARB, PARC, Pinterest, She Media, SiriusXM, SoundCloud, Spotify, TBS,
+            The Street Editorial, The Trade Desk, TheSkimm, TNT, TRU, USA, Vox, WSJ
         Placementobjective: objective of the ad buy.
         Budget Source: funding/budget source.
         IA Target: target income level. Values include None, HHI 30%, 75k, 100-249k, 250k, 50k.
