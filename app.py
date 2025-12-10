@@ -27,7 +27,7 @@ for var in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"]:
 app = FastAPI()
 
 origins = [
-  #  "https://witty-bush-00501930f.3.azurestaticapps.net",  # static web app hostname
+    "https://witty-bush-00501930f.3.azurestaticapps.net",  # static web app hostname
     "https://tableau2.digital.accenture.com"  # Tableau Server hostname
 ]
 
