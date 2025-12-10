@@ -43,8 +43,8 @@ app.add_middleware(
 @app.middleware("http")
 async def check_origin(request: Request, call_next):
     origin = request.headers.get("origin")
-    referer = request.headers.get("referer")
-    if origin and referer not in origins:
+    #referer = request.headers.get("referer")
+    if origin and origin not in origins:
         raise HTTPException(status_code=403, detail="Origin not allowed")
     # Optional: check referer contains tableau host if you want
     # if referer and "tableau2.digital.accenture.com" not in referer:
