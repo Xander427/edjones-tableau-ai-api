@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 import pyodbc
 from azure.identity import DefaultAzureCredential #pip install azure-identity
 from azure.identity import AzureCliCredential
@@ -39,11 +39,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#Require both Origin and Referer headers to match origins. This prevents casual misuse via web pages on other origins. 
+@app.middleware("http")
+async def check_origin(request: Request, call_next):
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+    if origin and referer not in origins:
+        raise HTTPException(status_code=403, detail="Origin not allowed")
+    # Optional: check referer contains tableau host if you want
+    # if referer and "tableau2.digital.accenture.com" not in referer:
+    #     raise HTTPException(status_code=403, detail="Referer not allowed")
+    return await call_next(request)
+
 # --- Healthcheck endpoint ---
 @app.get("/")
 def healthcheck():
     return {"status": "ok"}
 
+# --- Helper functions ---
 def get_db_connection(retries=3, delay=3):
     """
     Returns a pyodbc connection to Azure SQL Database.
@@ -438,12 +451,14 @@ async def ai_query(payload: AIQueryRequest):
         channel: media channel. Values include Connected TV, Paid Search, Article, TV, Skimms IG, Video - Pre-Roll, Display, None, Podcast, Paid Social, YouTube, Native, Video, Newsletter, Audio, DOOH.
         FunnelStrategy: funnel strategy.
         journeyPhase: journey/funnel location. Values include Pre-Explore Awareness, None, Evaluate, Explore, Pre-Explore Familiarity.
-        Platform: Online Video platform (Hulu, Netflix, etc.), Publication (Meredith, WSJ, etc.), Audio Streaming site (Pandora, Spotify, etc.), Social Media platform (Instagram, Pinterest, etc.), etc.
+        Platform: Values include "ABC", "Amazon", "Bing", "Bleacher Report", "CBS", "CNBC", "Discovery Plus", "Disney", "DV360", "ENT", "ESP2", "ESPN", "Facebook", "FBN", "FOX", "FS1", "GOLF", "Google", "HTS", "Hulu", "Instagram",
+            "LinkedIn", "Meredith", "NASDAQ", "Nativo", "NBAT", "NBC", "Netflix", "NGC", "NPR", "Pandora", "Paramount", "PARB", "PARC", "Pinterest", "She Media", "SiriusXM", "SoundCloud", "Spotify", "TBS",
+            "The Street Editorial", "The Trade Desk", "TheSkimm", "TNT", "TRU", "USA", "Vox", "WSJ"
         Placementobjective: objective of the ad buy.
         Budget Source: funding/budget source.
         IA Target: target income level. Values include None, HHI 30%, 75k, 100-249k, 250k, 50k.
         Geographic: geography. Values include Designated Market Areas, National, High Net Worth, None, Local.
-        Targeting Strategy: Values include Hyper Local Targeting, 1st Party Audience Data, Demographic Targeting Only,Google Custom Intent, Recency RTG, Retargeting Targeting, Lookalike Modeling
+        Targeting Strategy: Values include Hyper Local Targeting, 1st Party Audience Data, Demographic Targeting Only,Google Custom Intent, Recency RTG, Retargeting Targeting, Lookalike Modeling, 
             Topic Targeting, Google Custom Affinity, Specific Site List, Google In Market, Keyword Contextual, Run of Site Targeting, Video Retargeting, Multiple Targeting Methods, Google Affinity Data
             None, Run of Network Targeting, Behavioral Targeting, Website Retargeting, Contextual Targeting.
         Target Audience: target audience.
