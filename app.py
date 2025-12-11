@@ -466,6 +466,7 @@ async def ai_query(payload: AIQueryRequest):
             None, Run of Network Targeting, Behavioral Targeting, Website Retargeting, Contextual Targeting.
         Target Audience: target audience.
         Campaign Objective: ad objective. Values include Engagement, FA Lookup, Everfi Learners, Conversions, Prospect, Site Traffic, None, Awareness, Leads.
+        Publisher: BusinessInsider, Conde Nast, Discovery, Meredith, Nasdaq, Nativo, NBC, Netflix, None, Paramount, Pinterest, Roku, SiriusXM, The Trade Desk, TripleLift, USA Today, Wall Street Journal, YouTube
         callcount: number of calls.
         clicks: number of clicks.
         impressions: number of impressions.
