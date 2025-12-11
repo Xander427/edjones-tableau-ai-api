@@ -40,7 +40,7 @@ app.add_middleware(
 )
 
 #Require both Origin headers to match origins. This prevents casual misuse via web pages on other origins. 
-@app.middleware("http")
+'''@app.middleware("http")
 async def check_origin(request: Request, call_next):
     # Allow preflight OPTIONS requests to pass through untouched
     if request.method == "OPTIONS":
@@ -52,7 +52,25 @@ async def check_origin(request: Request, call_next):
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
     return await call_next(request)
+'''
 
+#SECURITY - Shared Secret required for Tableau extension. 
+EXT_SECRET = os.getenv("TABLEAU_EXTENSION_SECRET")
+
+@app.middleware("http")
+async def enforce_shared_secret(request: Request, call_next):
+
+    # Allow OPTIONS for CORS preflight
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
+    # Read header
+    client_secret = request.headers.get("X-Extension-Secret")
+
+    if not client_secret or client_secret != EXT_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid or missing extension secret")
+
+    return await call_next(request)
 
 # --- Healthcheck endpoint ---
 @app.get("/")
