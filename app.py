@@ -516,7 +516,7 @@ async def ai_query(payload: AIQueryRequest):
     Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions), EV = Engaged Visits, TTD = The Trade Desk.
     Note that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
     INTERVAL should not be used for date ranges (it is not valid SQL); use DATEADD and DATEDIFF functions instead.
-    SQL code like: WHERE date < '2025-01-01' + 365 is not valid SQL - dates and integers are not compatible; use DATEADD and DATEDIFF functions instead.
+    Integers cannot be added to dates in SQL code like: WHERE date < '2025-01-01' + 365; use DATEADD and DATEDIFF functions instead.
 
     User question: {user_query}
     """
