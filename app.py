@@ -52,7 +52,7 @@ async def check_origin(request: Request, call_next):
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
     return await call_next(request)
-'''
+
 
 #SECURITY - Shared Secret required for Tableau extension. 
 EXT_SECRET = os.getenv("TABLEAU_EXTENSION_SECRET")
@@ -71,6 +71,7 @@ async def enforce_shared_secret(request: Request, call_next):
         raise HTTPException(status_code=403, detail="Invalid or missing extension secret")
 
     return await call_next(request)
+'''
 
 # --- Healthcheck endpoint ---
 @app.get("/")
