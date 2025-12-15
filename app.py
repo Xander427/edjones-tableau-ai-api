@@ -39,7 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#Require both Origin headers to match origins. This prevents casual misuse via web pages on other origins. 
+#Require both Origin headers to match origins. This prevents casual misuse via web pages on other origins. These are moot...
 '''@app.middleware("http")
 async def check_origin(request: Request, call_next):
     # Allow preflight OPTIONS requests to pass through untouched
@@ -458,6 +458,7 @@ class AIQueryRequest(BaseModel):
 async def ai_query(payload: AIQueryRequest):
     
     user_query = sanitize_user_query(payload.query)
+    tableau_user = payload.get("user.username", "unknown")
 
     if not user_query:
         return {"error": "No query provided."}
@@ -565,7 +566,7 @@ async def ai_query(payload: AIQueryRequest):
         cursor.execute("""
             INSERT INTO Tableau_AI_QueryLog (user_query, sql_generated, rows_returned, summary, tableau_user)
             VALUES (?, ?, ?, ?, ?)
-        """, (user_query, sql_query, len(results), summary[:4000], "Unknown"))  # or detected user
+        """, (user_query, sql_query, len(results), summary[:4000], tableau_user))  
         conn.commit()
     except Exception as log_err:
         print("Logging failed:", log_err)
