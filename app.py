@@ -15,6 +15,7 @@ import httpx
 import re
 from datetime import datetime, date, timedelta
 import calendar
+from typing import Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
@@ -450,19 +451,28 @@ client = AzureOpenAI(
 #    http_client=http_client
 #)
 
+
+#for retreiving tableau user info
+class TableauUser(BaseModel):
+    username: Optional[str] = "unknown"
+    fullName: Optional[str] = None
+    role: Optional[str] = None
+    domain: Optional[str] = None
+
 class AIQueryRequest(BaseModel):
     query: str
+    user: Optional[TableauUser] = None
 
 
 @app.post("/ai_query")
 async def ai_query(payload: AIQueryRequest):
-    
+
     user_query = sanitize_user_query(payload.query)
-    if not user_query:
-        return {"error": "No query provided."}
-    
+
     tableau_user = (
-        payload.get("user", {}).get("username", "unknown")
+        payload.user.username
+        if payload.user and payload.user.username
+        else "unknown"
     )
     
     schema_info = """
