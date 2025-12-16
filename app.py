@@ -458,10 +458,14 @@ class AIQueryRequest(BaseModel):
 async def ai_query(payload: AIQueryRequest):
     
     user_query = sanitize_user_query(payload.query)
-    tableau_user = payload.get("user.username", "unknown")
-
     if not user_query:
         return {"error": "No query provided."}
+    
+    tableau_user = (
+        payload.user.username
+        if payload.user and payload.user.username
+        else "unknown"
+    )
     
     schema_info = """
     The database contains advertising campaign performance data with the following tables (table name: description):
