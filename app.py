@@ -462,9 +462,7 @@ async def ai_query(payload: AIQueryRequest):
         return {"error": "No query provided."}
     
     tableau_user = (
-        payload.user.username
-        if payload.user and payload.user.username
-        else "unknown"
+        payload.get("user", {}).get("username", "unknown")
     )
     
     schema_info = """
