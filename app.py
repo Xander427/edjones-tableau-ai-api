@@ -444,24 +444,9 @@ client = AzureOpenAI(
     http_client=http_client
 )
 
-#client = AzureOpenAI(
-#    api_key=os.getenv("AZURE_OPENAI_KEY"),
-#    api_version="2025-01-01-preview",
-#    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-#    http_client=http_client
-#)
-
-
-#for retreiving tableau user info
-class TableauUser(BaseModel):
-    username: Optional[str] = "unknown"
-    fullName: Optional[str] = None
-    role: Optional[str] = None
-    domain: Optional[str] = None
-
 class AIQueryRequest(BaseModel):
     query: str
-    user: Optional[TableauUser] = None
+    client_id: Optional[str] = None
 
 
 @app.post("/ai_query")
@@ -469,11 +454,7 @@ async def ai_query(payload: AIQueryRequest):
 
     user_query = sanitize_user_query(payload.query)
 
-    tableau_user = (
-        payload.user.username
-        if payload.user and payload.user.username
-        else "unknown"
-    )
+    client_id = payload.client_id or "unknown"  #uuid retreived from index.html based on client browser
     
     schema_info = """
     The database contains advertising campaign performance data with the following tables (table name: description):
@@ -578,7 +559,7 @@ async def ai_query(payload: AIQueryRequest):
         cursor.execute("""
             INSERT INTO Tableau_AI_QueryLog (user_query, sql_generated, rows_returned, summary, tableau_user)
             VALUES (?, ?, ?, ?, ?)
-        """, (user_query, sql_query, len(results), summary[:4000], tableau_user))  
+        """, (user_query, sql_query, len(results), summary[:4000], client_id))  
         conn.commit()
     except Exception as log_err:
         print("Logging failed:", log_err)
