@@ -132,19 +132,30 @@ def parse_date_from_query(query: str):
     query_lower = query.lower()
     today = date.today()
     
-    # ==== YEAR DETECTION ====
-    year_match = re.search(r'\b(20\d{2})\b', query)
-    if year_match:
-        year = int(year_match.group(1))
-        start_date = f"{year}-01-01"
-        end_date = f"{year}-12-31"
+    # ==== MONTH DETECTION (most specific) ====
+    month_names = {
+        'january': 1, 'february': 2, 'march': 3, 'april': 4,
+        'may': 5, 'june': 6, 'july': 7, 'august': 8,
+        'september': 9, 'october': 10, 'november': 11, 'december': 12
+    }
+    
+    month_match = re.search(r'\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(20\d{2})\b', query_lower)
+    if month_match:
+        month_name = month_match.group(1)
+        month_num = month_names[month_name]
+        year = int(month_match.group(2))
+        
+        start_date = f"{year}-{month_num:02d}-01"
+        last_day = calendar.monthrange(year, month_num)[1]
+        end_date = f"{year}-{month_num:02d}-{last_day:02d}"
+        
         return {
             "field": "date",
             "values": [start_date, end_date]
         }
     
     # ==== QUARTER DETECTION ====
-    quarter_match = re.search(r'(q[1-4]|quarter\s+[1-4])\s+(20\d{2})', query_lower)
+    quarter_match = re.search(r'\b(q[1-4]|quarter\s+[1-4])\s+(20\d{2})\b', query_lower)
     if quarter_match:
         quarter = int(re.search(r'[1-4]', quarter_match.group(1)).group())
         year = int(quarter_match.group(2))
@@ -156,28 +167,6 @@ def parse_date_from_query(query: str):
         start_date = f"{year}-{start_month:02d}-01"
         last_day = calendar.monthrange(year, end_month)[1]
         end_date = f"{year}-{end_month:02d}-{last_day:02d}"
-        
-        return {
-            "field": "date",
-            "values": [start_date, end_date]
-        }
-    
-    # ==== MONTH DETECTION ====
-    month_names = {
-        'january': 1, 'february': 2, 'march': 3, 'april': 4,
-        'may': 5, 'june': 6, 'july': 7, 'august': 8,
-        'september': 9, 'october': 10, 'november': 11, 'december': 12
-    }
-    
-    month_match = re.search(r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+(20\d{2})', query_lower)
-    if month_match:
-        month_name = month_match.group(1)
-        month_num = month_names[month_name]
-        year = int(month_match.group(2))
-        
-        start_date = f"{year}-{month_num:02d}-01"
-        last_day = calendar.monthrange(year, month_num)[1]
-        end_date = f"{year}-{month_num:02d}-{last_day:02d}"
         
         return {
             "field": "date",
@@ -224,6 +213,17 @@ def parse_date_from_query(query: str):
     if "ytd" in query_lower or "year to date" in query_lower:
         start_date = f"{today.year}-01-01"
         end_date = str(today)
+        return {
+            "field": "date",
+            "values": [start_date, end_date]
+        }
+    
+    # ==== YEAR DETECTION (least specific - run last) ====
+    year_match = re.search(r'\b(20\d{2})\b', query_lower)
+    if year_match:
+        year = int(year_match.group(1))
+        start_date = f"{year}-01-01"
+        end_date = f"{year}-12-31"
         return {
             "field": "date",
             "values": [start_date, end_date]
