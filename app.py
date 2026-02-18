@@ -443,7 +443,7 @@ async def ai_query(payload: AIQueryRequest):
     
     schema_info = """
     The database contains advertising campaign performance data with the following tables (table name: description):
-        v_TableauData_30Days: view with last 31 days of data. This table is not necessary if querying data older than 31 days.
+        v_TableauData_30Days: view with data 1-31 days old. 
         Tableau_31DaysandOlder: table with data older than 32 days and up to 25 months old.
     
     These two tables have identical columns. Relevant columns and their descriptions are outlined below (column name: description):
