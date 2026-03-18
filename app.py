@@ -322,17 +322,9 @@ async def db_test():
 # --- Tableau Filter Map ---
 
 FILTER_MAP = {
-  "Measure Names": [
-    "Allowed Ads", "Authenticated Traffic", "CP EV", "CP FALU", "CP Lead", "CPC", "CPCV",
-    "CPL + Calls", "CPM", "CPSV", "CPVV", "CTR", "Call Count (Google Only)", "Clicks",
-    "Clicks to Call", "Engaged Visits", "Engaged Visits Pinterest", "Engaged Visits Total",
-    "FALUs", "Fraud/SIVT Free Ads", "Fraud/SIVT Incidents", "Fraud/SIVT Rate",
-    "Impressions", "Leads", "Leads + Calls", "Leads Pinterest", "Leads Total",
-    "Measured Impressions", "Media Spend", "Paid Social Fees",
-    "Paid Social Spend - Raw", "Qualified Site Visitor", "Site Visits", "Site Visits_CM",
-    "TotalConversions", "Unique Incidents", "VCR", "VVR", "Video Complete", 
-    "Video Views", "VideoPlays", "Viewability", "Viewable Impressions"
-  ],
+  # "Measure Names" intentionally excluded — it is a Tableau system field that controls
+  # which measures are displayed in a view, not a data dimension. Including it caused
+  # over-filtering on metric queries (leads, impressions, etc.).
 
   "Geography": ["Dallas", "DC", "National", "None", "Seattle"],
 
@@ -494,11 +486,15 @@ async def ai_query(payload: AIQueryRequest):
         FROM Tableau_31DaysandOlder
     ) AS CombinedData
     Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions), EV = Engaged Visits, TTD = The Trade Desk.
+    For CPM calculations, use the weighted average formula: SUM(mediaCost) * 1000.0 / NULLIF(SUM(impressions), 0). Exclude rows where impressions = 0 or impressions IS NULL to avoid diluting the result with non-impression-based channels like Paid Search.
     Note that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
     INTERVAL should not be used for date ranges (it is not valid SQL); use DATEADD and DATEDIFF functions instead.
     Integers cannot be added to dates in SQL code like: WHERE date < '2025-01-01' + 365; use DATEADD and DATEDIFF functions instead.
     Facebook data is stored under "Facebook" in the Platform column; it is NOT a channel.
     Column names that contain spaces must be wrapped in square brackets, e.g., [Engaged Visits], [Keyword Type], [Budget Source].
+    Unless the user specifically asks about FunnelStrategy 'Null', 'NA', or 'Quarter 2', always exclude those rows by default using WHERE FunnelStrategy NOT IN ('Null', 'NA', 'Quarter 2').
+    When grouping or filtering by Journey Phase (journeyPhase), always exclude rows where journeyPhase = 'None'.
+    When ordering results by Journey Phase, always use this order via a CASE expression in ORDER BY: Pre-Explore Awareness = 1, Pre-Explore Familiarity = 2, Explore = 3, Evaluate = 4.
 
     User question: {user_query}
     """
