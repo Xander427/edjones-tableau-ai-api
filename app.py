@@ -440,9 +440,9 @@ async def ai_query(payload: AIQueryRequest):
     
     These two tables have identical columns. Relevant columns and their descriptions are outlined below (column name: description):
         date: day.
-        Campaign: campaign category
+        Campaign: campaign category. Valid values are: 250K, EdWoW, GenNext, Investor, NA, PIC, PII. IMPORTANT: '250K' is a campaign name, not a dollar amount — never interpret it as a numeric threshold.
         channel: media channel. Values include Connected TV, Paid Search, Article, TV, Skimms IG, Video - Pre-Roll, Display, None, Podcast, Paid Social, YouTube, Native, Video, Newsletter, Audio, DOOH.
-        FunnelStrategy: funnel strategy.
+        FunnelStrategy: funnel strategy. Valid values are: Brand and Performance. NULL, NA, and Quarter 2 should not be queried unless specified.
         journeyPhase: journey/funnel location. Values include Pre-Explore Awareness, None, Evaluate, Explore, Pre-Explore Familiarity.
         Platform: Values include ABC, Amazon, Bing, Bleacher Report, CBS, CNBC, Discovery Plus, Disney, DV360, ENT, ESP2, ESPN, Facebook, FBN, FOX, FS1, GOLF, Google, HTS, Hulu, Instagram,
             LinkedIn, Meredith, NASDAQ, Nativo, NBAT, NBC, Netflix, NGC, NPR, Pandora, Paramount, PARB, PARC, Pinterest, She Media, SiriusXM, SoundCloud, Spotify, TBS,
