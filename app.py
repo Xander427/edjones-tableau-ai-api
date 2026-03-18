@@ -44,8 +44,8 @@ app.add_middleware(
 @app.middleware("http")
 async def require_tableau(request: Request, call_next):
 
-    # Allow CORS preflight
-    if request.method == "OPTIONS":
+    # Allow CORS preflight and Azure health checks
+    if request.method == "OPTIONS" or request.url.path == "/":
         return await call_next(request)
 
     # Enforce Tableau-only header
