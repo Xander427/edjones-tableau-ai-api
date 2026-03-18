@@ -440,22 +440,18 @@ async def ai_query(payload: AIQueryRequest):
     
     These two tables have identical columns. Relevant columns and their descriptions are outlined below (column name: description):
         date: day.
-        Campaign: campaign.
+        Campaign: campaign category
         channel: media channel. Values include Connected TV, Paid Search, Article, TV, Skimms IG, Video - Pre-Roll, Display, None, Podcast, Paid Social, YouTube, Native, Video, Newsletter, Audio, DOOH.
         FunnelStrategy: funnel strategy.
         journeyPhase: journey/funnel location. Values include Pre-Explore Awareness, None, Evaluate, Explore, Pre-Explore Familiarity.
         Platform: Values include ABC, Amazon, Bing, Bleacher Report, CBS, CNBC, Discovery Plus, Disney, DV360, ENT, ESP2, ESPN, Facebook, FBN, FOX, FS1, GOLF, Google, HTS, Hulu, Instagram,
             LinkedIn, Meredith, NASDAQ, Nativo, NBAT, NBC, Netflix, NGC, NPR, Pandora, Paramount, PARB, PARC, Pinterest, She Media, SiriusXM, SoundCloud, Spotify, TBS,
             The Street Editorial, The Trade Desk, TheSkimm, TNT, TRU, USA, Vox, WSJ
-        Placementobjective: objective of the ad buy.
-        [Budget Source]: funding/budget source.
-        [IA Target]: target income level. Values include None, HHI 30%, 75k, 100-249k, 250k, 50k.
-        Geographic: geography. Values include Designated Market Areas, National, High Net Worth, None, Local.
+        Geography: Values include Designated Market Areas, National, High Net Worth, None, Local.
         [Targeting Strategy]: Values include Hyper Local Targeting, 1st Party Audience Data, Demographic Targeting Only,Google Custom Intent, Recency RTG, Retargeting Targeting, Lookalike Modeling, 
             Topic Targeting, Google Custom Affinity, Specific Site List, Google In Market, Keyword Contextual, Run of Site Targeting, Video Retargeting, Multiple Targeting Methods, Google Affinity Data
             None, Run of Network Targeting, Behavioral Targeting, Website Retargeting, Contextual Targeting.
         [Target Audience]: target audience.
-        [Campaign Objective]: ad objective. Values include Engagement, FA Lookup, Everfi Learners, Conversions, Prospect, Site Traffic, None, Awareness, Leads.
         Publisher: BusinessInsider, Conde Nast, Discovery, Meredith, Nasdaq, Nativo, NBC, Netflix, None, Paramount, Pinterest, Roku, SiriusXM, The Trade Desk, TripleLift, USA Today, Wall Street Journal, YouTube
         callcount: number of calls.
         clicks: number of clicks.
