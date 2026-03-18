@@ -367,7 +367,7 @@ FILTER_MAP = {
     "FAN LAL", "Other", "Platform Lookalike", "Website Retargeting"
   ],
 
-  "Campaign Category": ["250K", "EdWoW", "GenNext", "Investor", "NA", "PIC", "PII"],
+  "Campaign": ["250K", "EdWoW", "GenNext", "Investor", "NA", "PIC", "PII"],
 
   "FunnelStrategy": ["Null", "Brand", "NA", "Performance", "Quarter 2"],
 
@@ -456,14 +456,14 @@ async def ai_query(payload: AIQueryRequest):
             LinkedIn, Meredith, NASDAQ, Nativo, NBAT, NBC, Netflix, NGC, NPR, Pandora, Paramount, PARB, PARC, Pinterest, She Media, SiriusXM, SoundCloud, Spotify, TBS,
             The Street Editorial, The Trade Desk, TheSkimm, TNT, TRU, USA, Vox, WSJ
         Placementobjective: objective of the ad buy.
-        Budget Source: funding/budget source.
-        IA Target: target income level. Values include None, HHI 30%, 75k, 100-249k, 250k, 50k.
+        [Budget Source]: funding/budget source.
+        [IA Target]: target income level. Values include None, HHI 30%, 75k, 100-249k, 250k, 50k.
         Geographic: geography. Values include Designated Market Areas, National, High Net Worth, None, Local.
-        Targeting Strategy: Values include Hyper Local Targeting, 1st Party Audience Data, Demographic Targeting Only,Google Custom Intent, Recency RTG, Retargeting Targeting, Lookalike Modeling, 
+        [Targeting Strategy]: Values include Hyper Local Targeting, 1st Party Audience Data, Demographic Targeting Only,Google Custom Intent, Recency RTG, Retargeting Targeting, Lookalike Modeling, 
             Topic Targeting, Google Custom Affinity, Specific Site List, Google In Market, Keyword Contextual, Run of Site Targeting, Video Retargeting, Multiple Targeting Methods, Google Affinity Data
             None, Run of Network Targeting, Behavioral Targeting, Website Retargeting, Contextual Targeting.
-        Target Audience: target audience.
-        Campaign Objective: ad objective. Values include Engagement, FA Lookup, Everfi Learners, Conversions, Prospect, Site Traffic, None, Awareness, Leads.
+        [Target Audience]: target audience.
+        [Campaign Objective]: ad objective. Values include Engagement, FA Lookup, Everfi Learners, Conversions, Prospect, Site Traffic, None, Awareness, Leads.
         Publisher: BusinessInsider, Conde Nast, Discovery, Meredith, Nasdaq, Nativo, NBC, Netflix, None, Paramount, Pinterest, Roku, SiriusXM, The Trade Desk, TripleLift, USA Today, Wall Street Journal, YouTube
         callcount: number of calls.
         clicks: number of clicks.
@@ -472,7 +472,7 @@ async def ai_query(payload: AIQueryRequest):
         siteVisits: number of site visits.
         videoFullyPlayed: videos played completely, 100%.
         videoViews: video views.
-        Engaged Visits: engaged visits.
+        [Engaged Visits]: engaged visits. IMPORTANT: this column name contains a space and MUST always be referenced as [Engaged Visits] in SQL.
         Leads: leads (applies only to pinterest data).
     """
 
@@ -498,6 +498,7 @@ async def ai_query(payload: AIQueryRequest):
     INTERVAL should not be used for date ranges (it is not valid SQL); use DATEADD and DATEDIFF functions instead.
     Integers cannot be added to dates in SQL code like: WHERE date < '2025-01-01' + 365; use DATEADD and DATEDIFF functions instead.
     Facebook data is stored under "Facebook" in the Platform column; it is NOT a channel.
+    Column names that contain spaces must be wrapped in square brackets, e.g., [Engaged Visits], [Keyword Type], [Budget Source].
 
     User question: {user_query}
     """
