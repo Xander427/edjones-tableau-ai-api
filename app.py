@@ -359,7 +359,7 @@ FILTER_MAP = {
     "FAN LAL", "Other", "Platform Lookalike", "Website Retargeting"
   ],
 
-  "Campaign": ["250K", "EdWoW", "GenNext", "Investor", "NA", "PIC", "PII"],
+  "Campaign Category": ["250K", "EdWoW", "GenNext", "Investor", "NA", "PIC", "PII"],
 
   "FunnelStrategy": ["Null", "Brand", "NA", "Performance", "Quarter 2"],
 
