@@ -506,6 +506,7 @@ async def ai_query(payload: AIQueryRequest):
     When grouping or filtering by Journey Phase (journeyPhase), always exclude rows where journeyPhase = 'None'.
     When ordering results by Journey Phase, always use this order via a CASE expression in ORDER BY: Pre-Explore Awareness = 1, Pre-Explore Familiarity = 2, Explore = 3, Evaluate = 4.
     When filtering Publisher or Platform by a name that may have variants (e.g., 'Hulu' could match 'Hulu', 'Hulu Slate', 'Hulu DSE'), use LIKE '%name%' in the WHERE clause to include all variants.
+    When querying any metric over a time period (month, quarter, year), always use a date range with >= and < (e.g., date >= '2025-10-01' AND date < '2025-11-01'). Never use a single date equality filter (WHERE date = 'YYYY-MM-DD') unless the user explicitly asks about a specific single day.
 
     User question: {user_query}
     """
