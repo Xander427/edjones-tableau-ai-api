@@ -218,6 +218,18 @@ def parse_date_from_query(query: str):
             "values": [start_date, end_date]
         }
     
+    # ==== BARE MONTH (no year specified - default to most recent occurrence) ====
+    bare_month_match = re.search(r'\b(january|february|march|april|may|june|july|august|september|october|november|december)\b', query_lower)
+    if bare_month_match and not re.search(r'\b(20\d{2})\b', query_lower):
+        month_name = bare_month_match.group(1)
+        month_num = month_names[month_name]
+        # If the month has already passed or is current this year, use this year; otherwise last year
+        year = today.year if month_num <= today.month else today.year - 1
+        start_date = f"{year}-{month_num:02d}-01"
+        last_day = calendar.monthrange(year, month_num)[1]
+        end_date = f"{year}-{month_num:02d}-{last_day:02d}"
+        return {"field": "date", "values": [start_date, end_date]}
+
     # ==== YEAR DETECTION (least specific - run last) ====
     year_match = re.search(r'\b(20\d{2})\b', query_lower)
     if year_match:
@@ -326,6 +338,8 @@ FILTER_MAP = {
   # which measures are displayed in a view, not a data dimension. Including it caused
   # over-filtering on metric queries (leads, impressions, etc.).
 
+  "Branded": ["Brand", "Non-Brand"],
+
   "Geography": ["Dallas", "DC", "National", "None", "Seattle"],
 
   "Publisher   ": [
@@ -350,12 +364,12 @@ FILTER_MAP = {
     "Women - W30-49, HHI $75k+"
   ],
 
-  "Sub-Audience 1": [
+  "SubAudience1": [
     "Mindset - Career Changer", "Mindset - Generic", "Mindset - Golden Years",
     "Mindset - Life Improvers", "Mindset - Money Maker", "Other"
   ],
 
-  "Sub-Audience 2": [
+  "SubAudience2": [
     "FAN LAL", "Other", "Platform Lookalike", "Website Retargeting"
   ],
 
@@ -486,11 +500,12 @@ async def ai_query(payload: AIQueryRequest):
     Note that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
     INTERVAL should not be used for date ranges (it is not valid SQL); use DATEADD and DATEDIFF functions instead.
     Integers cannot be added to dates in SQL code like: WHERE date < '2025-01-01' + 365; use DATEADD and DATEDIFF functions instead.
-    Facebook data is stored under "Facebook" in the Platform column; it is NOT a channel.
+    When a user asks about a specific brand, network, or service by name (e.g., ESPN, CNBC, Pandora, Spotify, Disney, Hulu, Netflix, Instagram, Nativo, SiriusXM, YouTube, Facebook, Roku, LinkedIn, Pinterest, Bloomberg, NBC, ABC, CBS, FOX, Amazon), always filter by the Platform or Publisher column — NEVER by channel. The channel column only contains broad media types: Connected TV, Paid Search, Paid Social, Display, Video, Audio, TV, Podcast, Native, Article, Newsletter, DOOH.
     Column names that contain spaces must be wrapped in square brackets, e.g., [Engaged Visits], [Keyword Type], [Budget Source].
     Unless the user specifically asks about FunnelStrategy 'Null', 'NA', or 'Quarter 2', always exclude those rows by default using WHERE FunnelStrategy NOT IN ('Null', 'NA', 'Quarter 2').
     When grouping or filtering by Journey Phase (journeyPhase), always exclude rows where journeyPhase = 'None'.
     When ordering results by Journey Phase, always use this order via a CASE expression in ORDER BY: Pre-Explore Awareness = 1, Pre-Explore Familiarity = 2, Explore = 3, Evaluate = 4.
+    When filtering Publisher or Platform by a name that may have variants (e.g., 'Hulu' could match 'Hulu', 'Hulu Slate', 'Hulu DSE'), use LIKE '%name%' in the WHERE clause to include all variants.
 
     User question: {user_query}
     """
@@ -502,7 +517,7 @@ async def ai_query(payload: AIQueryRequest):
         {"role": "user", "content": prompt}
     ],
     temperature=0,
-    max_tokens=200
+    max_tokens=500
 )
 
     sql_query = response.choices[0].message.content.strip()
