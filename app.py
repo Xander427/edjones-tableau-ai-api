@@ -284,6 +284,12 @@ def extract_filters_from_query(user_query: str):
         filters[date_filter["field"]] = date_filter["values"]
         print(f"Detected date filter: {date_filter['values']}")
 
+    # Measure Names filter — only for metrics not shown by default in the dashboard.
+    # "Leads" is excluded from the default view; filter the dashboard to show it when asked.
+    # Exclude cp lead / cost per lead / cpl queries — those ask for the cost metric, not the count.
+    if re.search(r'\bleads?\b', query_lower) and not re.search(r'\b(cp lead|cost per lead|cpl)\b', query_lower):
+        filters["Measure Names"] = ["Leads"]
+
     return filters
 
 
@@ -486,14 +492,16 @@ async def ai_query(payload: AIQueryRequest):
 
     Return only **valid SQL**, do not include explanations, comments, or markdown.
     Do not include any text outside the SQL query.
-    Queries that reference both tables should use a UNION ALL in a subquery, e.g., 
-    SELECT ... 
+    Queries that reference both tables should use a UNION ALL in a subquery. You MUST include AND FunnelStrategy NOT IN ('Null', 'NA', 'Quarter 2') in the WHERE clause of EVERY inner subquery — no exceptions, even if FunnelStrategy is not selected or grouped:
+    SELECT ...
     FROM (
-        SELECT ... 
-        FROM v_TableauData_30Days  
+        SELECT ...
+        FROM v_TableauData_30Days
+        WHERE <date or other conditions> AND FunnelStrategy NOT IN ('Null', 'NA', 'Quarter 2')
         UNION ALL
         SELECT ...
         FROM Tableau_31DaysandOlder
+        WHERE <date or other conditions> AND FunnelStrategy NOT IN ('Null', 'NA', 'Quarter 2')
     ) AS CombinedData
     Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions), CPSV = Cost Per Site Visit, CPCV = Cost Per Completed View, EV = Engaged Visits, TTD = The Trade Desk.
     For CP EV / CPEV calculations, use: SUM(mediaCost) / NULLIF(SUM([Engaged Visits]), 0). Note: [Engaged Visits] must always be in square brackets.
