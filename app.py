@@ -471,7 +471,7 @@ async def ai_query(payload: AIQueryRequest):
         clicks: number of clicks.
         impressions: number of impressions.
         mediaCost: media spend/budget.
-        siteVisits: number of site visits.
+        siteVisits: number of site visits. IMPORTANT: the column is named siteVisits (camelCase, no spaces, no brackets). Do NOT use [Site Visits] or Sessioncount.
         videoFullyPlayed: videos played completely, 100%.
         videoViews: video views.
         [Engaged Visits]: engaged visits. IMPORTANT: this column name contains a space and MUST always be referenced as [Engaged Visits] in SQL.
@@ -495,8 +495,12 @@ async def ai_query(payload: AIQueryRequest):
         SELECT ...
         FROM Tableau_31DaysandOlder
     ) AS CombinedData
-    Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions), EV = Engaged Visits, TTD = The Trade Desk.
-    For CPM calculations, use the weighted average formula: SUM(mediaCost) * 1000.0 / NULLIF(SUM(impressions), 0). Exclude rows where impressions = 0 or impressions IS NULL to avoid diluting the result with non-impression-based channels like Paid Search.
+    Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions), CPSV = Cost Per Site Visit, CPCV = Cost Per Completed View, EV = Engaged Visits, TTD = The Trade Desk.
+    For CP EV / CPEV calculations, use: SUM(mediaCost) / NULLIF(SUM([Engaged Visits]), 0). Note: [Engaged Visits] must always be in square brackets.
+    For CPSV (Cost Per Site Visit) calculations, use: SUM(mediaCost) / NULLIF(SUM(siteVisits), 0).
+    For CPL / CP Lead (Cost Per Lead) calculations, use: SUM(mediaCost) / NULLIF(SUM(Leads), 0).
+    For CPCV (Cost Per Completed View) calculations, use: SUM(mediaCost) / NULLIF(SUM(videoFullyPlayed), 0).
+    For CPM calculations, use the weighted average formula: SUM(mediaCost) * 1000.0 / NULLIF(SUM(impressions), 0). Do NOT add a WHERE impressions > 0 filter — non-impression channels (Audio, Podcast, Paid Search) have impressions = 0 and their spend must still be included in the mediaCost numerator. NULLIF handles division by zero.
     Note that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
     INTERVAL should not be used for date ranges (it is not valid SQL); use DATEADD and DATEDIFF functions instead.
     Integers cannot be added to dates in SQL code like: WHERE date < '2025-01-01' + 365; use DATEADD and DATEDIFF functions instead.
