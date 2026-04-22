@@ -478,8 +478,9 @@ async def ai_query(payload: AIQueryRequest):
         impressions: number of impressions.
         mediaCost: media spend/budget.
         siteVisits: number of site visits. IMPORTANT: the column is named siteVisits (camelCase, no spaces, no brackets). Do NOT use [Site Visits] or Sessioncount.
-        videoFullyPlayed: videos played completely, 100%.
-        videoViews: video views.
+        videoFullyPlayed: videos played completely, 100%. Frequently referred to as "Video Completes".
+        VideoPlays: total number of video plays/starts. Use this column when a user asks for "Video Views" or "video plays".
+        Viewability: calculated as SUM([Viewable Impressions]) / SUM([Measured Impressions]). Use this formula directly when asked for viewability — do not use these two columns for anything else.
         [Engaged Visits]: engaged visits. IMPORTANT: this column name contains a space and MUST always be referenced as [Engaged Visits] in SQL.
         Leads: leads (applies only to pinterest data).
     """
@@ -503,11 +504,12 @@ async def ai_query(payload: AIQueryRequest):
         FROM Tableau_31DaysandOlder
         WHERE <date or other conditions> AND FunnelStrategy NOT IN ('Null', 'NA', 'Quarter 2')
     ) AS CombinedData
-    Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions), CPSV = Cost Per Site Visit, CPCV = Cost Per Completed View, EV = Engaged Visits, TTD = The Trade Desk.
+    Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions), CPSV = Cost Per Site Visit, CPCV = Cost Per Completed View, VCR = Video Completion Rate, EV = Engaged Visits, TTD = The Trade Desk.
     For CP EV / CPEV calculations, use: SUM(mediaCost) / NULLIF(SUM([Engaged Visits]), 0). Note: [Engaged Visits] must always be in square brackets.
     For CPSV (Cost Per Site Visit) calculations, use: SUM(mediaCost) / NULLIF(SUM(siteVisits), 0).
     For CPL / CP Lead (Cost Per Lead) calculations, use: SUM(mediaCost) / NULLIF(SUM(Leads), 0).
     For CPCV (Cost Per Completed View) calculations, use: SUM(mediaCost) / NULLIF(SUM(videoFullyPlayed), 0).
+    For VCR (Video Completion Rate) calculations, use: SUM(videoFullyPlayed) / NULLIF(SUM(VideoPlays), 0).
     For CPM calculations, use the weighted average formula: SUM(mediaCost) * 1000.0 / NULLIF(SUM(impressions), 0). Do NOT add a WHERE impressions > 0 filter — non-impression channels (Audio, Podcast, Paid Search) have impressions = 0 and their spend must still be included in the mediaCost numerator. NULLIF handles division by zero.
     Note that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
     INTERVAL should not be used for date ranges (it is not valid SQL); use DATEADD and DATEDIFF functions instead.
