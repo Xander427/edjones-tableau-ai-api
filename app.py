@@ -276,7 +276,13 @@ def extract_filters_from_query(user_query: str):
                 matched_text.add(val_lower)
 
         if matched_values:
-            filters[field] = matched_values
+            # Prevent "Video" channel from matching when the user is asking about a video metric
+            if field == "Channel" and "Video" in matched_values:
+                video_metric_pattern = r'\b(video views|video plays|video completion|vcr|video completes?|video completion rate)\b'
+                if re.search(video_metric_pattern, query_lower):
+                    matched_values.remove("Video")
+            if matched_values:
+                filters[field] = matched_values
 
     # NEW: Extract date range
     date_filter = parse_date_from_query(user_query)
@@ -479,9 +485,14 @@ async def ai_query(payload: AIQueryRequest):
         mediaCost: media spend/budget.
         siteVisits: number of site visits. IMPORTANT: the column is named siteVisits (camelCase, no spaces, no brackets). Do NOT use [Site Visits] or Sessioncount.
         videoFullyPlayed: videos played completely, 100%. Frequently referred to as "Video Completes".
-        VideoPlays: total number of video plays/starts. Use this column when a user asks for "Video Views" or "video plays".
+        videoViews: video view count for non-YouTube platforms.
+        VideoPlays: video play/start count, primarily for YouTube and other platforms.
+        tablename: source table identifier. The value 'v_YouTubePaidMedia' identifies YouTube rows.
+        mediaBuyName: name of the media buy/placement.
+        Video Views (calculated): The correct formula for "Video Views" matches the Tableau dashboard and MUST be used whenever the user asks for video views, video plays, or any metric whose denominator is video views (VCR, CPCV). Formula: COALESCE(SUM(videoViews),0) + COALESCE(SUM(VideoPlays),0) + COALESCE(SUM(CASE WHEN tablename='v_YouTubePaidMedia' AND (mediaBuyName LIKE '%NonSkippable%' OR mediaBuyName LIKE '%Bumper%') THEN impressions ELSE 0 END),0)
         Viewability: calculated as SUM([Viewable Impressions]) / SUM([Measured Impressions]). Use this formula directly when asked for viewability — do not use these two columns for anything else.
         [Engaged Visits]: engaged visits. IMPORTANT: this column name contains a space and MUST always be referenced as [Engaged Visits] in SQL.
+        CallCount: number of calls (Google only).
         Leads: leads (applies only to pinterest data).
     """
 
@@ -509,7 +520,7 @@ async def ai_query(payload: AIQueryRequest):
     For CPSV (Cost Per Site Visit) calculations, use: SUM(mediaCost) / NULLIF(SUM(siteVisits), 0).
     For CPL / CP Lead (Cost Per Lead) calculations, use: SUM(mediaCost) / NULLIF(SUM(Leads), 0).
     For CPCV (Cost Per Completed View) calculations, use: SUM(mediaCost) / NULLIF(SUM(videoFullyPlayed), 0).
-    For VCR (Video Completion Rate) calculations, use: SUM(videoFullyPlayed) / NULLIF(SUM(VideoPlays), 0).
+    For VCR (Video Completion Rate) calculations, use: SUM(videoFullyPlayed) / NULLIF(<Video Views formula>, 0) where <Video Views formula> = COALESCE(SUM(videoViews),0) + COALESCE(SUM(VideoPlays),0) + COALESCE(SUM(CASE WHEN tablename='v_YouTubePaidMedia' AND (mediaBuyName LIKE '%NonSkippable%' OR mediaBuyName LIKE '%Bumper%') THEN impressions ELSE 0 END),0).
     For CPM calculations, use the weighted average formula: SUM(mediaCost) * 1000.0 / NULLIF(SUM(impressions), 0). Do NOT add a WHERE impressions > 0 filter — non-impression channels (Audio, Podcast, Paid Search) have impressions = 0 and their spend must still be included in the mediaCost numerator. NULLIF handles division by zero.
     Note that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
     INTERVAL should not be used for date ranges (it is not valid SQL); use DATEADD and DATEDIFF functions instead.
@@ -554,7 +565,13 @@ async def ai_query(payload: AIQueryRequest):
         }
 
     # --- Step 3: Summarize results ---
-    summary_prompt = f"Summarize these results briefly:\n{results}"
+    summary_prompt = f"""Summarize these results briefly for a user who asked: "{user_query}"
+IMPORTANT: Use only these acronym definitions — do not invent alternatives:
+VCR = Video Completion Rate (NEVER "Value Creation Ratio" or any other meaning)
+CPCV = Cost Per Completed View, CPM = Cost Per Mille, CPL = Cost Per Lead,
+CPEV = Cost Per Engaged Visit, CPSV = Cost Per Site Visit, CTR = Click-Through Rate.
+Results:
+{results}"""
     summary = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": summary_prompt}],
