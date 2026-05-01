@@ -291,10 +291,15 @@ def extract_filters_from_query(user_query: str):
         print(f"Detected date filter: {date_filter['values']}")
 
     # Measure Names filter — only for metrics not shown by default in the dashboard.
-    # "Leads" is excluded from the default view; filter the dashboard to show it when asked.
-    # Exclude cp lead / cost per lead / cpl queries — those ask for the cost metric, not the count.
+    measure_names = []
+    # Leads: excluded from default view; add when asked (but not for CPL/cost per lead queries)
     if re.search(r'\bleads?\b', query_lower) and not re.search(r'\b(cp lead|cost per lead|cpl)\b', query_lower):
-        filters["Measure Names"] = ["Leads"]
+        measure_names.append("Leads")
+    # VCR: not in default view; add when asked (but not for CPCV/cost per completed view queries)
+    if re.search(r'\bvcr\b|\bvideo completion rate\b', query_lower) and not re.search(r'\bcpcv\b|\bcost per completed view\b', query_lower):
+        measure_names.append("VCR")
+    if measure_names:
+        filters["Measure Names"] = measure_names
 
     return filters
 
