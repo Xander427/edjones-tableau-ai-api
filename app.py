@@ -138,7 +138,55 @@ def parse_date_from_query(query: str):
         'may': 5, 'june': 6, 'july': 7, 'august': 8,
         'september': 9, 'october': 10, 'november': 11, 'december': 12
     }
-    
+
+    # Normalize Unicode en/em dashes to ASCII hyphen for date range matching
+    query_for_dates = re.sub(r'[–—]', '-', query_lower)
+
+    # ==== NUMERIC DATE RANGE (most specific) e.g. "1/6/26 - 2/14/26" ====
+    numeric_range = re.search(
+        r'\b(\d{1,2})/(\d{1,2})/(\d{2,4})\s*-+\s*(\d{1,2})/(\d{1,2})/(\d{2,4})\b',
+        query_for_dates
+    )
+    if numeric_range:
+        def _y(s): y = int(s); return 2000 + y if y < 100 else y
+        return {"field": "date", "values": [
+            str(date(_y(numeric_range.group(3)), int(numeric_range.group(1)), int(numeric_range.group(2)))),
+            str(date(_y(numeric_range.group(6)), int(numeric_range.group(4)), int(numeric_range.group(5))))
+        ]}
+
+    # ==== WEEK RANGE same month e.g. "Mar 16-22, 2026" ====
+    week_range = re.search(
+        r'\b(january|february|march|april|may|june|july|august|september|october|november|december)'
+        r'\s+(\d{1,2})\s*-+\s*(\d{1,2}),?\s+(20\d{2})\b',
+        query_for_dates
+    )
+    if week_range:
+        m = month_names[week_range.group(1)]
+        y = int(week_range.group(4))
+        return {"field": "date", "values": [
+            f"{y}-{m:02d}-{int(week_range.group(2)):02d}",
+            f"{y}-{m:02d}-{int(week_range.group(3)):02d}"
+        ]}
+
+    # ==== CROSS-MONTH DATE RANGE e.g. "Apr 8 - Jun 2, 2025" or "Jan 6, 2026 - Feb 14, 2026" ====
+    cross_month_range = re.search(
+        r'\b(january|february|march|april|may|june|july|august|september|october|november|december)'
+        r'\s+(\d{1,2})(?:,?\s+(20\d{2}))?\s*-+\s*'
+        r'(january|february|march|april|may|june|july|august|september|october|november|december)'
+        r'\s+(\d{1,2}),?\s+(20\d{2})\b',
+        query_for_dates
+    )
+    if cross_month_range:
+        end_year = int(cross_month_range.group(6))
+        start_year = int(cross_month_range.group(3)) if cross_month_range.group(3) else end_year
+        s_m = month_names[cross_month_range.group(1)]
+        e_m = month_names[cross_month_range.group(4)]
+        return {"field": "date", "values": [
+            f"{start_year}-{s_m:02d}-{int(cross_month_range.group(2)):02d}",
+            f"{end_year}-{e_m:02d}-{int(cross_month_range.group(5)):02d}"
+        ]}
+
+    # ==== MONTH DETECTION (month + year) ====
     month_match = re.search(r'\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(20\d{2})\b', query_lower)
     if month_match:
         month_name = month_match.group(1)
@@ -249,15 +297,19 @@ def extract_filters_from_query(user_query: str):
     filters = {}
     query_lower = user_query.lower()
 
+    # Expand Journey Phase abbreviations so PREA/PREF match the full FILTER_MAP values
+    query_normalized = re.sub(r'\bprea\b', 'pre-explore awareness', query_lower)
+    query_normalized = re.sub(r'\bpref\b', 'pre-explore familiarity', query_normalized)
+
     # Extract standard categorical filters (your existing logic)
     for field, values in FILTER_MAP.items():
         if values == "RANGE":  # Skip range filters in value matching
             continue
-            
+
         # ... your existing categorical filter matching logic ...
         # (keep everything you currently have for Publisher, Platform, etc.)
         sorted_values = sorted(values, key=lambda v: len(v or ""), reverse=True)
-        
+
         matched_values = []
         matched_text = set()
 
@@ -268,7 +320,7 @@ def extract_filters_from_query(user_query: str):
             val_lower = value.lower()
             pattern = r"\b" + re.escape(val_lower) + r"\b"
 
-            if re.search(pattern, query_lower):
+            if re.search(pattern, query_normalized):
                 if any(val_lower in m for m in matched_text):
                     continue
 
@@ -474,7 +526,7 @@ async def ai_query(payload: AIQueryRequest):
         Campaign: campaign category. Valid values are: 250K, EdWoW, GenNext, Investor, NA, PIC, PII. IMPORTANT: '250K' is a campaign name, not a dollar amount — never interpret it as a numeric threshold.
         channel: media channel. Values include Connected TV, Paid Search, Article, TV, Skimms IG, Video - Pre-Roll, Display, None, Podcast, Paid Social, YouTube, Native, Video, Newsletter, Audio, DOOH.
         FunnelStrategy: funnel strategy. Valid values are: Brand and Performance. NULL, NA, and Quarter 2 should not be queried unless specified.
-        journeyPhase: journey/funnel location. Values include Pre-Explore Awareness, None, Evaluate, Explore, Pre-Explore Familiarity.
+        journeyPhase: journey/funnel location. Values include Pre-Explore Awareness (aka PREA), None, Evaluate, Explore, Pre-Explore Familiarity (aka PREF).
         Platform: Values include ABC, Amazon, Bing, Bleacher Report, CBS, CNBC, Discovery Plus, Disney, DV360, ENT, ESP2, ESPN, Facebook, FBN, FOX, FS1, GOLF, Google, HTS, Hulu, Instagram,
             LinkedIn, Meredith, NASDAQ, Nativo, NBAT, NBC, Netflix, NGC, NPR, Pandora, Paramount, PARB, PARC, Pinterest, She Media, SiriusXM, SoundCloud, Spotify, TBS,
             The Street Editorial, The Trade Desk, TheSkimm, TNT, TRU, USA, Vox, WSJ
@@ -488,7 +540,26 @@ async def ai_query(payload: AIQueryRequest):
         clicks: number of clicks.
         impressions: number of impressions.
         mediaCost: media spend/budget.
-        siteVisits: number of site visits. IMPORTANT: the column is named siteVisits (camelCase, no spaces, no brackets). Do NOT use [Site Visits] or Sessioncount.
+        siteVisits: direct site visits recorded at the placement level.
+        TotalConversions: conversion count used for CM Floodlight and LinkedIn-sourced site visits.
+        ConversionTagName: name of the conversion tag. Rows where this field matches specific CM Floodlight tag names represent additional site visits.
+        Site Visits (combined, matches Tableau dashboard): ALWAYS use this formula — never use siteVisits alone — when the user asks about site visits or CPSV:
+            ISNULL(SUM(siteVisits), 0)
+            + ISNULL(SUM(CASE WHEN ConversionTagName IN (
+                'Floodlight - ACC - EJ Investor All Pages',
+                'ejgen : Floodlight - ACC - EJ Investor All Pages: Paid Search Actions',
+                'Floodlight - ACC - Match Tool - Landing Page',
+                'Floodlight - ACC - Starting Point - Homepage',
+                'MatchTool : Floodlight - ACC - Match Tool - Landing Page: Paid Search Actions',
+                'Startp002 : Floodlight - ACC - Starting Point - Homepage: Paid Search Actions',
+                'FLOODLIGHT_ACC_EJ_INVESTOR_ALL_PAGES',
+                'FLOODLIGHT_ACC_MATCH_TOOL_LANDING_PAGE',
+                'FLOODLIGHT_ACC_STARTING_POINT_HOMEPAGE',
+                'EJGEN_FLOODLIGHT_ACC_EJ_INVESTOR_ALL_PAGES_PAID_SEARCH_ACTIONS',
+                'MATCHTOOL_FLOODLIGHT_ACC_MATCH_TOOL_LANDING_PAGE_PAID_SEARCH_ACTIONS',
+                'STARTP002_FLOODLIGHT_ACC_STARTING_POINT_HOMEPAGE_PAID_SEARCH_ACTIONS'
+            ) THEN TotalConversions ELSE 0 END), 0)
+            + ISNULL(SUM(CASE WHEN tablename = 'v_LinkedInCampaign' THEN TotalConversions ELSE 0 END), 0)
         videoFullyPlayed: videos played completely, 100%. Frequently referred to as "Video Completes".
         videoViews: video view count for non-YouTube platforms.
         VideoPlays: video play/start count, primarily for YouTube and other platforms.
@@ -520,10 +591,11 @@ async def ai_query(payload: AIQueryRequest):
         FROM Tableau_31DaysandOlder
         WHERE <date or other conditions> AND FunnelStrategy NOT IN ('Null', 'NA', 'Quarter 2')
     ) AS CombinedData
-    Acronyms: CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions), CPSV = Cost Per Site Visit, CPCV = Cost Per Completed View, VCR = Video Completion Rate, EV = Engaged Visits, TTD = The Trade Desk.
+    Acronyms: CPC = Cost Per Click, CPL = Cost Per Lead, CTR = Click-Through Rate (clicks / impressions), CPEV = Cost Per Engaged Visit, CPM = Cost Per Mille (Cost per 1000 Impressions), CPSV = Cost Per Site Visit, CPCV = Cost Per Completed View, VCR = Video Completion Rate (also called Audio Completion Rate for audio placements — same formula), EV = Engaged Visits, TTD = The Trade Desk. CPV = Cost Per View = CPCV.
     For CP EV / CPEV calculations, use: SUM(mediaCost) / NULLIF(SUM([Engaged Visits]), 0). Note: [Engaged Visits] must always be in square brackets.
-    For CPSV (Cost Per Site Visit) calculations, use: SUM(mediaCost) / NULLIF(SUM(siteVisits), 0).
+    For CPSV (Cost Per Site Visit) and any site visit count, NEVER use SUM(siteVisits) alone — always use the combined Site Visits formula from the schema above: ISNULL(SUM(siteVisits),0) + ISNULL(SUM(CASE WHEN ConversionTagName IN (...12 floodlight values...) THEN TotalConversions ELSE 0 END),0) + ISNULL(SUM(CASE WHEN tablename='v_LinkedInCampaign' THEN TotalConversions ELSE 0 END),0). CPSV = SUM(mediaCost) / NULLIF(<combined site visits>, 0).
     For CPL / CP Lead (Cost Per Lead) calculations, use: SUM(mediaCost) / NULLIF(SUM(Leads), 0).
+    For CPC (Cost Per Click) calculations, use: SUM(mediaCost) / NULLIF(SUM(clicks), 0). IMPORTANT: CPC (Cost Per Click) is completely different from CPCV (Cost Per Completed View) — never use videoFullyPlayed for CPC.
     For CPCV (Cost Per Completed View) calculations, use: SUM(mediaCost) / NULLIF(SUM(videoFullyPlayed), 0).
     For VCR (Video Completion Rate) calculations, use: SUM(videoFullyPlayed) / NULLIF(<Video Views formula>, 0) where <Video Views formula> = COALESCE(SUM(videoViews),0) + COALESCE(SUM(VideoPlays),0) + COALESCE(SUM(CASE WHEN tablename='v_YouTubePaidMedia' AND (mediaBuyName LIKE '%NonSkippable%' OR mediaBuyName LIKE '%Bumper%') THEN impressions ELSE 0 END),0).
     For CPM calculations, use the weighted average formula: SUM(mediaCost) * 1000.0 / NULLIF(SUM(impressions), 0). Do NOT add a WHERE impressions > 0 filter — non-impression channels (Audio, Podcast, Paid Search) have impressions = 0 and their spend must still be included in the mediaCost numerator. NULLIF handles division by zero.
@@ -536,7 +608,12 @@ async def ai_query(payload: AIQueryRequest):
     When grouping or filtering by Journey Phase (journeyPhase), always exclude rows where journeyPhase = 'None'.
     When ordering results by Journey Phase, always use this order via a CASE expression in ORDER BY: Pre-Explore Awareness = 1, Pre-Explore Familiarity = 2, Explore = 3, Evaluate = 4.
     When filtering Publisher or Platform by a name that may have variants (e.g., 'Hulu' could match 'Hulu', 'Hulu Slate', 'Hulu DSE'), use LIKE '%name%' in the WHERE clause to include all variants.
+    Direction rules — always apply ORDER BY and TOP N to return only what the user asked for:
+      - For volume metrics (impressions, clicks, leads, site visits, engaged visits): "highest/most/top" = ORDER BY metric DESC; "lowest/fewest/least" = ORDER BY metric ASC.
+      - For cost-efficiency metrics (CPM, CPC, CPL, CPSV, CPEV, CPCV): LOWER values are better. "lowest/cheapest/most efficient/best" = ORDER BY metric ASC; "highest/most expensive/worst" = ORDER BY metric DESC.
+      - Use SELECT TOP 1 when asking for a single winner; TOP N when the user specifies a count (e.g., "top 3").
     When querying any metric over a time period (month, quarter, year), always use a date range with >= and < (e.g., date >= '2025-10-01' AND date < '2025-11-01'). Never use a single date equality filter (WHERE date = 'YYYY-MM-DD') unless the user explicitly asks about a specific single day.
+    For period-over-period comparisons (month-over-month, year-over-year, or any "change from X to Y"): compute both periods in a single query using conditional aggregation with CASE WHEN inside a CTE, then calculate the difference in the outer SELECT. For simple metrics: SUM(CASE WHEN date >= 'A_start' AND date < 'A_end' THEN column ELSE 0 END) AS period_A. For weighted-average metrics like CPM, compute numerator and denominator separately per period: SUM(CASE WHEN period_A THEN mediaCost ELSE 0 END)*1000.0/NULLIF(SUM(CASE WHEN period_A THEN impressions ELSE 0 END),0) AS CPM_A. Percent change: (metric_B - metric_A) / NULLIF(metric_A, 0) * 100. Always label columns clearly (e.g., CPM_March, CPM_April, CPM_Change, CPM_PctChange).
 
     User question: {user_query}
     """
@@ -548,7 +625,7 @@ async def ai_query(payload: AIQueryRequest):
         {"role": "user", "content": prompt}
     ],
     temperature=0,
-    max_tokens=500
+    max_tokens=1000
 )
 
     sql_query = response.choices[0].message.content.strip()
@@ -575,6 +652,10 @@ IMPORTANT: Use only these acronym definitions — do not invent alternatives:
 VCR = Video Completion Rate (NEVER "Value Creation Ratio" or any other meaning)
 CPCV = Cost Per Completed View, CPM = Cost Per Mille, CPL = Cost Per Lead,
 CPEV = Cost Per Engaged Visit, CPSV = Cost Per Site Visit, CTR = Click-Through Rate.
+Formatting rules:
+- CTR, VCR, and Viewability are ratio metrics stored as decimals — always display them as percentages rounded to 2 decimal places (e.g., 0.09608 → 9.61%, 0.8043 → 80.43%).
+- All cost metrics (CPM, CPC, CPL, CPSV, CPEV, CPCV, mediaCost) should be prefixed with $.
+- For period-over-period results, clearly label each period and show the change and percent change.
 Results:
 {results}"""
     summary = client.chat.completions.create(
