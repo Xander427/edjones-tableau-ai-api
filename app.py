@@ -186,6 +186,30 @@ def parse_date_from_query(query: str):
             f"{end_year}-{e_m:02d}-{int(cross_month_range.group(5)):02d}"
         ]}
 
+    # ==== MONTH-TO-MONTH RANGE e.g. "March 2026 and April 2026", "January and April 2026", "in 2026 between January and April" ====
+    month_range = re.search(
+        r'\b(january|february|march|april|may|june|july|august|september|october|november|december)'
+        r'(?:\s+(20\d{2}))?\s+(?:and|through|to|-)\s+'
+        r'(january|february|march|april|may|june|july|august|september|october|november|december)'
+        r'(?:\s+(20\d{2}))?\b',
+        query_for_dates
+    )
+    if month_range:
+        s_m = month_names[month_range.group(1)]
+        e_m = month_names[month_range.group(3)]
+        year_str = month_range.group(4) or month_range.group(2)
+        if not year_str:
+            y_match = re.search(r'\b(20\d{2})\b', query_for_dates)
+            year_str = y_match.group(1) if y_match else None
+        if year_str:
+            end_year = int(year_str)
+            start_year = int(month_range.group(2)) if month_range.group(2) else end_year
+            last_day = calendar.monthrange(end_year, e_m)[1]
+            return {"field": "date", "values": [
+                f"{start_year}-{s_m:02d}-01",
+                f"{end_year}-{e_m:02d}-{last_day:02d}"
+            ]}
+
     # ==== MONTH DETECTION (month + year) ====
     month_match = re.search(r'\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(20\d{2})\b', query_lower)
     if month_match:
@@ -607,6 +631,8 @@ async def ai_query(payload: AIQueryRequest):
     Unless the user specifically asks about FunnelStrategy 'Null', 'NA', or 'Quarter 2', always exclude those rows by default using WHERE FunnelStrategy NOT IN ('Null', 'NA', 'Quarter 2').
     When grouping or filtering by Journey Phase (journeyPhase), always exclude rows where journeyPhase = 'None'.
     When ordering results by Journey Phase, always use this order via a CASE expression in ORDER BY: Pre-Explore Awareness = 1, Pre-Explore Familiarity = 2, Explore = 3, Evaluate = 4.
+    When the user asks to see results 'by [dimension]' (e.g., 'by Journey Phase', 'by Platform', 'by month', 'by Channel'), always include that dimension in both SELECT and GROUP BY. For 'by month', use FORMAT(date, 'yyyy-MM') AS Month in SELECT and GROUP BY, ordered by Month. When asked for 'top N per month' (e.g., 'top 3 platforms by month'), use a CTE to compute monthly totals per dimension, then apply ROW_NUMBER() OVER (PARTITION BY Month ORDER BY metric DESC) and filter WHERE rn <= N in the outer SELECT.
+    When the user specifies a channel type (e.g., 'Paid Social platform', 'Display publisher', 'Connected TV placement'), filter by channel = 'channel_value' (e.g., WHERE channel = 'Paid Social') — never match channel type names against the Platform or Publisher columns. The channel column holds broad media types; Platform and Publisher hold specific vendor/network names within a channel.
     When filtering Publisher or Platform by a name that may have variants (e.g., 'Hulu' could match 'Hulu', 'Hulu Slate', 'Hulu DSE'), use LIKE '%name%' in the WHERE clause to include all variants.
     Direction rules — always apply ORDER BY and TOP N to return only what the user asked for:
       - For volume metrics (impressions, clicks, leads, site visits, engaged visits): "highest/most/top" = ORDER BY metric DESC; "lowest/fewest/least" = ORDER BY metric ASC.
@@ -656,6 +682,7 @@ Formatting rules:
 - CTR, VCR, and Viewability are ratio metrics stored as decimals — always display them as percentages rounded to 2 decimal places (e.g., 0.09608 → 9.61%, 0.8043 → 80.43%).
 - All cost metrics (CPM, CPC, CPL, CPSV, CPEV, CPCV, mediaCost) should be prefixed with $.
 - For period-over-period results, clearly label each period and show the change and percent change.
+- When results include Publisher or Platform variants as separate rows (e.g., 'Hulu' and 'Hulu Slate' and 'Hulu DSE'), list each variant separately — never merge or consolidate them into a single entry.
 Results:
 {results}"""
     summary = client.chat.completions.create(
