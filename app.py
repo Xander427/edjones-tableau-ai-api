@@ -324,6 +324,10 @@ def extract_filters_from_query(user_query: str):
     # Expand Journey Phase abbreviations so PREA/PREF match the full FILTER_MAP values
     query_normalized = re.sub(r'\bprea\b', 'pre-explore awareness', query_lower)
     query_normalized = re.sub(r'\bpref\b', 'pre-explore familiarity', query_normalized)
+    query_normalized = re.sub(r'\bpre-a\b', 'pre-explore awareness', query_normalized)
+    query_normalized = re.sub(r'\bpre-f\b', 'pre-explore familiarity', query_normalized)
+    query_normalized = re.sub(r'\bexp\b', 'explore', query_normalized)
+    query_normalized = re.sub(r'\beva\b', 'evaluate', query_normalized)
 
     # Extract standard categorical filters (your existing logic)
     for field, values in FILTER_MAP.items():
@@ -550,7 +554,7 @@ async def ai_query(payload: AIQueryRequest):
         Campaign: campaign category. Valid values are: 250K, EdWoW, GenNext, Investor, NA, PIC, PII. IMPORTANT: '250K' is a campaign name, not a dollar amount — never interpret it as a numeric threshold.
         channel: media channel. Values include Connected TV, Paid Search, Article, TV, Skimms IG, Video - Pre-Roll, Display, None, Podcast, Paid Social, YouTube, Native, Video, Newsletter, Audio, DOOH.
         FunnelStrategy: funnel strategy. Valid values are: Brand and Performance. NULL, NA, and Quarter 2 should not be queried unless specified.
-        journeyPhase: journey/funnel location. Values include Pre-Explore Awareness (aka PREA), None, Evaluate, Explore, Pre-Explore Familiarity (aka PREF).
+        journeyPhase: journey/funnel location. Values include Pre-Explore Awareness (aka PREA or PRE-A), None, Evaluate (aka EVA), Explore (aka EXP), Pre-Explore Familiarity (aka PREF or PRE-F).
         Platform: Values include ABC, Amazon, Bing, Bleacher Report, CBS, CNBC, Discovery Plus, Disney, DV360, ENT, ESP2, ESPN, Facebook, FBN, FOX, FS1, GOLF, Google, HTS, Hulu, Instagram,
             LinkedIn, Meredith, NASDAQ, Nativo, NBAT, NBC, Netflix, NGC, NPR, Pandora, Paramount, PARB, PARC, Pinterest, She Media, SiriusXM, SoundCloud, Spotify, TBS,
             The Street Editorial, The Trade Desk, TheSkimm, TNT, TRU, USA, Vox, WSJ
@@ -559,7 +563,7 @@ async def ai_query(payload: AIQueryRequest):
             Topic Targeting, Google Custom Affinity, Specific Site List, Google In Market, Keyword Contextual, Run of Site Targeting, Video Retargeting, Multiple Targeting Methods, Google Affinity Data
             None, Run of Network Targeting, Behavioral Targeting, Website Retargeting, Contextual Targeting.
         [Target Audience]: target audience.
-        Publisher: BusinessInsider, Conde Nast, Discovery, Meredith, Nasdaq, Nativo, NBC, Netflix, None, Paramount, Pinterest, Roku, SiriusXM, The Trade Desk, TripleLift, USA Today, Wall Street Journal, YouTube
+        Publisher: BusinessInsider, Conde Nast, Discovery, Meredith, Nasdaq, Nativo, NBC, Netflix, None, Paramount, Pinterest, Roku, Sirius XM, The Trade Desk, TripleLift, USA Today, Wall Street Journal, YouTube
         callcount: number of calls.
         clicks: number of clicks.
         impressions: number of impressions.
