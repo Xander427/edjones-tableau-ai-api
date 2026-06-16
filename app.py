@@ -321,7 +321,7 @@ def extract_filters_from_query(user_query: str):
     filters = {}
     query_lower = user_query.lower()
 
-    # Expand Journey Phase abbreviations so PREA/PREF match the full FILTER_MAP values
+    # Expand Journey Phase abbreviations so PREA/PREF/EVA/EXP match the full FILTER_MAP values
     query_normalized = re.sub(r'\bprea\b', 'pre-explore awareness', query_lower)
     query_normalized = re.sub(r'\bpref\b', 'pre-explore familiarity', query_normalized)
     query_normalized = re.sub(r'\bpre-a\b', 'pre-explore awareness', query_normalized)
@@ -387,7 +387,7 @@ def extract_filters_from_query(user_query: str):
 def sanitize_user_query(text: str) -> str:
     if not text:
         return ""
-    
+
     # Remove control characters
     text = re.sub(r"[\x00-\x1F\x7F]", " ", text)
 
@@ -396,6 +396,17 @@ def sanitize_user_query(text: str) -> str:
 
     # Limit length (prevents abuse)
     return text[:2000].strip()
+
+
+def normalize_journey_phases(text: str) -> str:
+    """Expand journeyPhase abbreviations so the LLM uses exact column values in SQL."""
+    text = re.sub(r'\bprea\b',  'Pre-Explore Awareness',   text, flags=re.IGNORECASE)
+    text = re.sub(r'\bpre-a\b', 'Pre-Explore Awareness',   text, flags=re.IGNORECASE)
+    text = re.sub(r'\bpref\b',  'Pre-Explore Familiarity', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bpre-f\b', 'Pre-Explore Familiarity', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bexp\b',   'Explore',                 text, flags=re.IGNORECASE)
+    text = re.sub(r'\beva\b',   'Evaluate',                text, flags=re.IGNORECASE)
+    return text
 
 
 # --- Pydantic model for requests ---
@@ -540,7 +551,7 @@ class AIQueryRequest(BaseModel):
 @app.post("/ai_query")
 async def ai_query(payload: AIQueryRequest):
 
-    user_query = sanitize_user_query(payload.query)
+    user_query = normalize_journey_phases(sanitize_user_query(payload.query))
 
     client_id = payload.client_id or "unknown"  #uuid retreived from index.html based on client browser
     
