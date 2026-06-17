@@ -612,6 +612,8 @@ async def ai_query(payload: AIQueryRequest):
     """
 
     # --- Step 1: Ask Azure OpenAI to generate SQL ---
+    today = date.today()
+    yesterday = today - timedelta(days=1)
     prompt = f"""
     You are a data assistant. Convert this natural-language question into a safe SQL query 
     for Microsoft SQL Server. All data is stored in two tables with the following schema:
@@ -638,7 +640,7 @@ async def ai_query(payload: AIQueryRequest):
     For CPCV (Cost Per Completed View) calculations, use: SUM(mediaCost) / NULLIF(SUM(videoFullyPlayed), 0).
     For VCR (Video Completion Rate) calculations, use: SUM(videoFullyPlayed) / NULLIF(<Video Views formula>, 0) where <Video Views formula> = COALESCE(SUM(videoViews),0) + COALESCE(SUM(VideoPlays),0) + COALESCE(SUM(CASE WHEN tablename='v_YouTubePaidMedia' AND (mediaBuyName LIKE '%NonSkippable%' OR mediaBuyName LIKE '%Bumper%') THEN impressions ELSE 0 END),0).
     For CPM calculations, use the weighted average formula: SUM(mediaCost) * 1000.0 / NULLIF(SUM(impressions), 0). Do NOT add a WHERE impressions > 0 filter — non-impression channels (Audio, Podcast, Paid Search) have impressions = 0 and their spend must still be included in the mediaCost numerator. NULLIF handles division by zero.
-    Note that there is a 1 day lag in data availability. We don't have any data for today. I.e., if today is June 10, the most recent data in the database is for June 9.
+    Today's date is {today.strftime('%B %d, %Y')}. There is a 1 day lag in data availability — the most recent data in the database is for {yesterday.strftime('%B %d, %Y')}. Use today's date to resolve any ambiguous time references (e.g., "this month", "since January", "last quarter", bare month names with no year).
     INTERVAL should not be used for date ranges (it is not valid SQL); use DATEADD and DATEDIFF functions instead.
     Integers cannot be added to dates in SQL code like: WHERE date < '2025-01-01' + 365; use DATEADD and DATEDIFF functions instead.
     When a user asks about a specific brand, network, or service by name (e.g., ESPN, CNBC, Pandora, Spotify, Disney, Hulu, Netflix, Instagram, Nativo, SiriusXM, YouTube, Facebook, Roku, LinkedIn, Pinterest, Bloomberg, NBC, ABC, CBS, FOX, Amazon), always filter by the Platform or Publisher column — NEVER by channel. The channel column only contains broad media types: Connected TV, Paid Search, Paid Social, Display, Video, Audio, TV, Podcast, Native, Article, Newsletter, DOOH.
